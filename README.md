@@ -1,2 +1,2 @@
 # cloud-cost-observability-platform
-AI-Assisted Cloud Cost Observability and Optimization Platform — BSc Final Year Project (SLIIT)
+AI-Assisted Cloud Cost Observability and Optimization Platform — IEEE 
