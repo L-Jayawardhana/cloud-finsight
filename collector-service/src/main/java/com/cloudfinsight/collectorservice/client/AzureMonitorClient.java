@@ -1,6 +1,7 @@
 package com.cloudfinsight.collectorservice.client;
 
 import com.azure.core.credential.TokenCredential;
+import com.azure.core.credential.TokenRequestContext;
 import com.azure.core.http.rest.Response;
 import com.azure.core.util.Context;
 import com.azure.identity.DefaultAzureCredentialBuilder;
@@ -10,15 +11,24 @@ import com.azure.monitor.query.models.MetricResult;
 import com.azure.monitor.query.models.MetricsQueryOptions;
 import com.azure.monitor.query.models.MetricsQueryResult;
 import com.azure.monitor.query.models.QueryTimeInterval;
+import com.cloudfinsight.collectorservice.client.dto.PrometheusQueryResponse;
+import com.cloudfinsight.collectorservice.client.dto.PrometheusResult;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -32,13 +42,23 @@ public class AzureMonitorClient {
         "Disk Write Bytes"
     );
 
+    private static final String PROMETHEUS_SCOPE = "https://prometheus.monitor.azure.com/.default";
+    private static final String MEMORY_METRIC_NAME = "system.memory.usage";
+
+    @Value("${collector.azure-monitor.prometheus-query-endpoint}")
+    private String prometheusQueryEndpoint;
+
+    private final TokenCredential credential;
     private final MetricsQueryClient client;
+    private final RestClient restClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AzureMonitorClient() {
-        TokenCredential credential = new DefaultAzureCredentialBuilder().build();
+        this.credential = new DefaultAzureCredentialBuilder().build();
         this.client = new MetricsQueryClientBuilder()
             .credential(credential)
             .buildClient();
+        this.restClient = RestClient.builder().build();
     }
 
     @Retryable(
@@ -77,6 +97,65 @@ public class AzureMonitorClient {
 
         log.info("Retrieved {} non-null data points for resource {}", points.size(), azureResourceId);
         return points;
+    }
+
+    @Retryable(
+        retryFor = { org.springframework.web.client.RestClientException.class },
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 2000, multiplier = 2)
+    )
+    public Optional<RawMetricPoint> queryMemoryUsagePercent(String azureResourceId) {
+        log.info("Querying Prometheus workspace for memory usage on resource {}", azureResourceId);
+
+        String token = credential.getToken(
+            new TokenRequestContext().addScopes(PROMETHEUS_SCOPE)
+        ).block().getToken();
+
+        String query = "{__name__=\"" + MEMORY_METRIC_NAME + "\"}";
+        String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8).replace("+", "%20");
+        String url = prometheusQueryEndpoint + "/api/v1/query?query=" + encodedQuery;
+
+        String rawJson = restClient.get()
+            .uri(URI.create(url))
+            .header("Authorization", "Bearer " + token)
+            .retrieve()
+            .body(String.class);
+
+        PrometheusQueryResponse response = parseResponse(rawJson);
+
+        double used = 0;
+        double total = 0;
+
+        for (PrometheusResult result : response.data().result()) {
+            String resourceId = result.metric().get("microsoft.resourceid");
+            if (resourceId == null || !resourceId.equalsIgnoreCase(azureResourceId)) {
+                continue;
+            }
+            String state = result.metric().get("state");
+            double value = Double.parseDouble(String.valueOf(result.value().get(1)));
+            total += value;
+            if ("used".equals(state)) {
+                used = value;
+            }
+        }
+
+        if (total == 0) {
+            log.warn("No memory usage data found for resource {}", azureResourceId);
+            return Optional.empty();
+        }
+
+        double percentUsed = (used / total) * 100.0;
+        log.info("Memory usage for resource {}: {}%", azureResourceId, percentUsed);
+
+        return Optional.of(new RawMetricPoint("Memory Percentage", percentUsed, OffsetDateTime.now()));
+    }
+
+    private PrometheusQueryResponse parseResponse(String rawJson) {
+        try {
+            return objectMapper.readValue(rawJson, PrometheusQueryResponse.class);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to parse Prometheus query response", e);
+        }
     }
 
     public record RawMetricPoint(String metricName, Double value, OffsetDateTime timestamp) {}

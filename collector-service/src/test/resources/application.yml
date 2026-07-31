@@ -25,3 +25,5 @@ spring:
 collector:
   scheduling:
     enabled: false
+  azure-monitor:
+    prometheus-query-endpoint: https://placeholder.prometheus.monitor.azure.com
