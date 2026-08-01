@@ -15,7 +15,9 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
@@ -39,8 +41,17 @@ public class MetricCollectionScheduler {
 
         for (VirtualMachine vm : vms) {
             try {
-                List<AzureMonitorClient.RawMetricPoint> rawPoints =
-                    azureMonitorClient.queryMetrics(vm.getAzureResourceId(), Duration.ofHours(1));
+                List<AzureMonitorClient.RawMetricPoint> rawPoints = new ArrayList<>(
+                    azureMonitorClient.queryMetrics(vm.getAzureResourceId(), Duration.ofHours(1))
+                );
+
+                try {
+                    Optional<AzureMonitorClient.RawMetricPoint> memoryPoint =
+                        azureMonitorClient.queryMemoryUsagePercent(vm.getAzureResourceId());
+                    memoryPoint.ifPresent(rawPoints::add);
+                } catch (Exception memEx) {
+                    log.warn("Memory usage query failed for VM {}: {}", vm.getName(), memEx.getMessage());
+                }
 
                 List<MetricSnapshot> snapshots = mapper.toEntities(vm, rawPoints);
                 metricSnapshotRepository.saveAll(snapshots);
