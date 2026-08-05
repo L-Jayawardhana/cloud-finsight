@@ -37,4 +37,10 @@ management:
       show-details: always
 
 collector:
+  scheduling:
+    enabled: true
   interval-ms: 900000
+  pricing:
+    interval-ms: 86400000
+    region: southeastasia
+    skus: Standard_D2s_v4,Standard_D2s_v3,Standard_D2s_v5
