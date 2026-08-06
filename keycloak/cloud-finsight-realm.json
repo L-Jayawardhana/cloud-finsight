@@ -2,6 +2,18 @@
   "realm": "cloud-finsight",
   "enabled": true,
   "sslRequired": "none",
+  "roles": {
+    "realm": [
+      {
+        "name": "viewer",
+        "description": "Read-only access to dashboard and recommendation endpoints"
+      },
+      {
+        "name": "admin",
+        "description": "Full access, including destructive operations like deleting recommendations"
+      }
+    ]
+  },
   "clients": [
     {
       "clientId": "cloud-finsight-api",
@@ -30,7 +42,25 @@
           "value": "Password123!",
           "temporary": false
         }
-      ]
+      ],
+      "realmRoles": ["viewer"]
+    },
+    {
+      "username": "admin-user",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "admin-user@cloud-finsight.local",
+      "firstName": "Admin",
+      "lastName": "User",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Password123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin"]
     }
   ]
 }
