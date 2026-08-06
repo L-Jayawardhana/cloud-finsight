@@ -26,6 +26,12 @@ spring:
     username: ${RABBITMQ_USER:finsight_user}
     password: ${RABBITMQ_PASSWORD}
     connection-timeout: 5000
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY}
+        chat:
+          model: gemini-3.6-flash
 
 management:
   endpoints:
