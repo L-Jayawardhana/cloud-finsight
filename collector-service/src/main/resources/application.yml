@@ -1,0 +1,28 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: collector-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:finsight}
+    username: ${POSTGRES_USER:finsight_user}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: ${RABBITMQ_USER:finsight_user}
+    password: ${RABBITMQ_PASSWORD}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
