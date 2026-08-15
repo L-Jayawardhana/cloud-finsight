@@ -1,0 +1,10 @@
+package com.cloudfinsight.collectorservice.repository;
+
+import com.cloudfinsight.collectorservice.entity.PricingSnapshot;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface PricingSnapshotRepository extends JpaRepository<PricingSnapshot, Long> {
+    List<PricingSnapshot> findByArmSkuNameAndRegion(String armSkuName, String region);
+}
