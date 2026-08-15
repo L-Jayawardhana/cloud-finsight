@@ -31,7 +31,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,metrics
+        include: health,info,metrics
   endpoint:
     health:
       show-details: always
+
+collector:
+  interval-ms: 900000
