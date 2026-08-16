@@ -6,6 +6,7 @@ import com.cloudfinsight.collectorservice.client.dto.RetailPricingRecord;
 import com.cloudfinsight.collectorservice.entity.PricingSnapshot;
 import com.cloudfinsight.collectorservice.mapper.PricingSnapshotMapper;
 import com.cloudfinsight.collectorservice.repository.PricingSnapshotRepository;
+import com.cloudfinsight.collectorservice.service.SkuCatalogueService;
 import io.micrometer.core.instrument.Counter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,12 +26,10 @@ import java.util.concurrent.atomic.AtomicLong;
 @ConditionalOnProperty(name = "collector.scheduling.enabled", havingValue = "true", matchIfMissing = true)
 public class PricingCollectionScheduler {
 
-    @Value("#{'${collector.pricing.skus}'.split(',')}")
-    private List<String> configuredSkus;
-
     @Value("${collector.pricing.region}")
     private String region;
 
+    private final SkuCatalogueService skuCatalogueService;
     private final AzureRetailPricesClient azureRetailPricesClient;
     private final PricingCacheService pricingCacheService;
     private final PricingSnapshotMapper mapper;
@@ -41,10 +40,10 @@ public class PricingCollectionScheduler {
 
     @Scheduled(fixedDelayString = "${collector.pricing.interval-ms}")
     public void collectPricing() {
-        log.info("Starting pricing collection cycle for {} configured SKU(s)", configuredSkus.size());
+        List<String> skus = skuCatalogueService.getAllArmSkuNames();
+        log.info("Starting pricing collection cycle for {} catalogued SKU(s)", skus.size());
 
-        for (String sku : configuredSkus) {
-            String armSkuName = sku.trim();
+        for (String armSkuName : skus) {
             try {
                 Optional<RetailPricingRecord> cached = pricingCacheService.get(armSkuName, region);
                 RetailPricingRecord record = cached.orElseGet(() -> {
