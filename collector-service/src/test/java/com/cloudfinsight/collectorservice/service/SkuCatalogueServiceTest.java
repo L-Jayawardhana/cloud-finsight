@@ -30,7 +30,7 @@ class SkuCatalogueServiceTest {
         VmSkuCatalogueEntry current = entry("Standard_D2s_v5", "CURRENT", 2, "8.00");
         VmSkuCatalogueEntry older = entry("Standard_D2s_v3", "OLDER_SUPPORTED", 2, "8.00");
 
-        when(repository.findByVcpuCountAndMemoryGbBetween(eq(2), any(), any()))
+        when(repository.findByVcpuCountBetweenAndMemoryGbBetween(any(), any(), any(), any()))
             .thenReturn(List.of(current, older));
 
         List<VmSkuCatalogueEntry> candidates = service.findCandidates(2, 8);
@@ -44,7 +44,7 @@ class SkuCatalogueServiceTest {
     @Test
     void findCandidates_preservesCorrectMetadataPerCandidate() {
         VmSkuCatalogueEntry entry = entry("Standard_D2s_v5", "CURRENT", 2, "8.00");
-        when(repository.findByVcpuCountAndMemoryGbBetween(eq(2), any(), any()))
+        when(repository.findByVcpuCountBetweenAndMemoryGbBetween(any(), any(), any(), any()))
             .thenReturn(List.of(entry));
 
         List<VmSkuCatalogueEntry> candidates = service.findCandidates(2, 8);
