@@ -9,11 +9,18 @@ spring:
     hibernate:
       ddl-auto: none
     open-in-view: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD}
+      timeout: 2000ms
   rabbitmq:
     host: localhost
     port: 5672
     username: ${RABBITMQ_USER:finsight_user}
     password: ${RABBITMQ_PASSWORD}
+    connection-timeout: 5000
 
 management:
   endpoints:
