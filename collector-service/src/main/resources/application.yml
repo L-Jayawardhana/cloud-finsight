@@ -2,6 +2,8 @@ server:
   port: 8081
 
 spring:
+  flyway:
+    enabled: false
   application:
     name: collector-service
   datasource:
