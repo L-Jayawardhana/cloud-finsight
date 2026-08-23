@@ -37,10 +37,13 @@ management:
       show-details: always
 
 collector:
+  azure-monitor:
+    prometheus-query-endpoint: https://amw-cloud-cost-platform-fthya7grcthgexcw.southeastasia.prometheus.monitor.azure.com
   scheduling:
     enabled: true
   interval-ms: 900000
   analysis:
+    rolling-window-days: 14
     interval-ms: 900000
   pricing:
     interval-ms: 86400000
