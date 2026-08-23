@@ -23,4 +23,10 @@ public class SkuCatalogueService {
 
         return repository.findByVcpuCountAndMemoryGbBetween(vcpuCount, min, max);
     }
+
+    public List<String> getAllArmSkuNames() {
+        return repository.findAll().stream()
+            .map(VmSkuCatalogueEntry::getArmSkuName)
+            .toList();
+    }
 }

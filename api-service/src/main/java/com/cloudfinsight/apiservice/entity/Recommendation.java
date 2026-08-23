@@ -25,6 +25,12 @@ public class Recommendation {
     @Column(nullable = false)
     private String status = "PENDING";
 
+    @Column(name = "recommendation_type", nullable = false)
+    private String recommendationType = "DOWNSIZE";
+
+    @Column(name = "confidence_level")
+    private String confidenceLevel;
+
     @Column
     private String summary;
 
