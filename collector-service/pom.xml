@@ -90,6 +90,25 @@
     	<groupId>org.springframework.boot</groupId>
     	<artifactId>spring-boot-starter-data-redis</artifactId>
 	</dependency>
+		<dependency>
+		<groupId>com.azure</groupId>
+		<artifactId>azure-identity</artifactId>
+		<version>1.15.0</version>
+	</dependency>
+	<dependency>
+		<groupId>com.azure</groupId>
+		<artifactId>azure-monitor-query</artifactId>
+		<version>1.5.4</version>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework.retry</groupId>
+		<artifactId>spring-retry</artifactId>
+		<version>2.0.13</version>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework</groupId>
+		<artifactId>spring-aspects</artifactId>
+	</dependency>
 </dependencies>
 
 	<build>
