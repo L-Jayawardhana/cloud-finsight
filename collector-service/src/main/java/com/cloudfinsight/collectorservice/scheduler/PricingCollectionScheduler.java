@@ -6,6 +6,7 @@ import com.cloudfinsight.collectorservice.client.dto.RetailPricingRecord;
 import com.cloudfinsight.collectorservice.entity.PricingSnapshot;
 import com.cloudfinsight.collectorservice.mapper.PricingSnapshotMapper;
 import com.cloudfinsight.collectorservice.repository.PricingSnapshotRepository;
+import io.micrometer.core.instrument.Counter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,8 +14,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @Component
@@ -22,7 +25,6 @@ import java.util.Optional;
 @ConditionalOnProperty(name = "collector.scheduling.enabled", havingValue = "true", matchIfMissing = true)
 public class PricingCollectionScheduler {
 
-    // Interim source until Task 3.3's SkuCatalogueService replaces this list.
     @Value("#{'${collector.pricing.skus}'.split(',')}")
     private List<String> configuredSkus;
 
@@ -33,6 +35,9 @@ public class PricingCollectionScheduler {
     private final PricingCacheService pricingCacheService;
     private final PricingSnapshotMapper mapper;
     private final PricingSnapshotRepository pricingSnapshotRepository;
+    private final Counter collectionCycleSuccessCounter;
+    private final Counter collectionCycleFailureCounter;
+    private final AtomicLong lastCollectionCycleTimestamp;
 
     @Scheduled(fixedDelayString = "${collector.pricing.interval-ms}")
     public void collectPricing() {
@@ -54,14 +59,18 @@ public class PricingCollectionScheduler {
                     pricingSnapshotRepository.save(snapshot);
                     log.info("Persisted pricing snapshot for SKU {}: {} {}",
                         armSkuName, record.retailPrice(), record.currencyCode());
+                    collectionCycleSuccessCounter.increment();
                 } else {
                     log.warn("No pricing found for SKU {} in region {}", armSkuName, region);
+                    collectionCycleFailureCounter.increment();
                 }
             } catch (Exception ex) {
                 log.warn("Pricing collection failed for SKU {}: {}", armSkuName, ex.getMessage());
+                collectionCycleFailureCounter.increment();
             }
         }
 
+        lastCollectionCycleTimestamp.set(Instant.now().toEpochMilli());
         log.info("Pricing collection cycle complete");
     }
 }
