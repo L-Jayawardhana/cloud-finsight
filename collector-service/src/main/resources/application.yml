@@ -43,8 +43,12 @@ collector:
     enabled: true
   interval-ms: 900000
   analysis:
-    rolling-window-days: 14
     interval-ms: 900000
+    rolling-window-days: 14
+  scoring:
+    cost-weight: 0.5
+    reliability-weight: 0.3
+    performance-weight: 0.2
   pricing:
     interval-ms: 86400000
     region: southeastasia

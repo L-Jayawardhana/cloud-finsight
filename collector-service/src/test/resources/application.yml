@@ -27,3 +27,9 @@ collector:
     enabled: false
   azure-monitor:
     prometheus-query-endpoint: https://placeholder.prometheus.monitor.azure.com
+  pricing:
+    region: southeastasia
+  scoring:
+    cost-weight: 0.5
+    reliability-weight: 0.3
+    performance-weight: 0.2
