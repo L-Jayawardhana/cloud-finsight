@@ -9,6 +9,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
 public class RabbitMQConfig {
@@ -59,5 +63,20 @@ public class RabbitMQConfig {
     @Bean
     public Binding recommendationsBinding(Queue recommendationsQueue, DirectExchange recommendationsExchange) {
         return BindingBuilder.bind(recommendationsQueue).to(recommendationsExchange).with(RECOMMENDATIONS_ROUTING_KEY);
+    }
+
+    // --- Publisher support (Task 5.2) ---
+
+    @Bean
+    public JacksonJsonMessageConverter jacksonJsonMessageConverter(JsonMapper jsonMapper) {
+        return new JacksonJsonMessageConverter(jsonMapper);
+    }
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
+                                          JacksonJsonMessageConverter jacksonJsonMessageConverter) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(jacksonJsonMessageConverter);
+        return template;
     }
 }
