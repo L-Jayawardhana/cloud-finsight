@@ -18,6 +18,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Slf4j
@@ -57,6 +58,8 @@ public class AnalysisScheduler {
             return;
         }
 
+        persistUtilisationSnapshot(vm, summary);
+
         List<CandidateSku> candidates = candidateGenerator.generateCandidates(vm.getCurrentSku(), summary);
         if (candidates.isEmpty()) {
             log.info("No candidates cleared the headroom threshold for VM {}", vm.getName());
@@ -81,5 +84,13 @@ public class AnalysisScheduler {
                 () -> log.info("No recommendation persisted for VM {} (missing pricing for top candidate)",
                     vm.getName())
             );
+    }
+
+    private void persistUtilisationSnapshot(VirtualMachine vm, UtilisationSummary summary) {
+        summary.get("percentage_cpu").ifPresent(stats ->
+            vm.setP95CpuPercent(BigDecimal.valueOf(stats.p95())));
+        summary.get("memory_percentage").ifPresent(stats ->
+            vm.setP95MemPercent(BigDecimal.valueOf(stats.p95())));
+        virtualMachineRepository.save(vm);
     }
 }
