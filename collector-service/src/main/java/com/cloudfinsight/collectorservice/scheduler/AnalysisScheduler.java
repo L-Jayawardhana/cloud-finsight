@@ -11,6 +11,7 @@ import com.cloudfinsight.collectorservice.service.RecommendationPackager;
 import com.cloudfinsight.collectorservice.service.SavingsCalculator;
 import com.cloudfinsight.collectorservice.service.TradeOffScorer;
 import com.cloudfinsight.collectorservice.service.UtilisationAggregator;
+import com.cloudfinsight.collectorservice.messaging.RecommendationPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -31,6 +32,7 @@ public class AnalysisScheduler {
     private final TradeOffScorer tradeOffScorer;
     private final SavingsCalculator savingsCalculator;
     private final RecommendationPackager recommendationPackager;
+    private final RecommendationPublisher recommendationPublisher;
 
     @Scheduled(fixedDelayString = "${collector.analysis.interval-ms}")
     public void runAnalysis() {
@@ -71,8 +73,11 @@ public class AnalysisScheduler {
 
         recommendationPackager.packageRecommendation(vm.getId(), scored, savings)
             .ifPresentOrElse(
-                rec -> log.info("Persisted {} recommendation for VM {}: {} saving/month",
-                    rec.getRecommendationType(), vm.getName(), rec.getEstimatedMonthlySavings()),
+                rec -> {
+                    log.info("Persisted {} recommendation for VM {}: {} saving/month",
+                        rec.getRecommendationType(), vm.getName(), rec.getEstimatedMonthlySavings());
+                    recommendationPublisher.publish(rec);
+                },
                 () -> log.info("No recommendation persisted for VM {} (missing pricing for top candidate)",
                     vm.getName())
             );
