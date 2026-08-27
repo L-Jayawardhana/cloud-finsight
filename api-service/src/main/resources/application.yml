@@ -1,6 +1,11 @@
 spring:
   application:
     name: api-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/cloud-finsight
   datasource:
     url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:finsight}
     username: ${POSTGRES_USER:finsight_user}
