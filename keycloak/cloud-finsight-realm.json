@@ -40,6 +40,40 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "cloud-finsight-spa",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "implicitFlowEnabled": false,
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://localhost:3000"
+      ],
+      "protocolMappers": [
+        {
+          "name": "audience-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "cloud-finsight-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
     }
   ],
   "users": [
@@ -54,7 +88,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "Password123!",
+          "value": "TestPass123",
           "temporary": false
         }
       ],
@@ -71,7 +105,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "Password123!",
+          "value": "TestPass123",
           "temporary": false
         }
       ],
