@@ -1,7 +1,7 @@
 export function formatCurrency(value: number | null | undefined): string {
   return value == null
     ? '—'
-    : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+    : new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value)
 }
 
 export function formatPercent(value: number | null | undefined): string {

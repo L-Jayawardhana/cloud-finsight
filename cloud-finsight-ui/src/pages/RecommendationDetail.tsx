@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useChatMessage, useExplainRecommendation, useRecommendation } from '../api/queries'
 import type { ChatMessage } from '../api/types'
-import { Layout } from '../components/Layout'
+import { DashboardLayout } from '../components/DashboardLayout'
 import { formatCurrency, formatDate, formatScore } from '../lib/format'
 
 export function RecommendationDetail() {
@@ -13,25 +13,25 @@ export function RecommendationDetail() {
 
   if (recommendation.isLoading) {
     return (
-      <Layout>
+      <DashboardLayout>
         <p>Loading recommendation…</p>
-      </Layout>
+      </DashboardLayout>
     )
   }
 
   if (recommendation.isError || !recommendation.data) {
     return (
-      <Layout>
+      <DashboardLayout>
         <p className="error-text">Recommendation not found.</p>
         <Link to="/">Back to overview</Link>
-      </Layout>
+      </DashboardLayout>
     )
   }
 
   const rec = recommendation.data
 
   return (
-    <Layout>
+    <DashboardLayout>
       <Link to="/">← Back to overview</Link>
       <h1>
         {rec.recommendationType} — {rec.vmName}
@@ -92,7 +92,7 @@ export function RecommendationDetail() {
       </section>
 
       <ChatPanel vmId={rec.vmId} />
-    </Layout>
+    </DashboardLayout>
   )
 }
 
