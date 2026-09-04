@@ -21,6 +21,7 @@ spring:
     username: ${RABBITMQ_USER:finsight_user}
     password: ${RABBITMQ_PASSWORD:finsight_123}
     connection-timeout: 5000
+    publisher-confirm-type: correlated
 
 collector:
   scheduling:
