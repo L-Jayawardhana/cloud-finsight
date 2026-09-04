@@ -1,4 +1,4 @@
-package com.cloudfinsight.collectorservice.config;
+package com.cloudfinsight.apiservice.config;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
