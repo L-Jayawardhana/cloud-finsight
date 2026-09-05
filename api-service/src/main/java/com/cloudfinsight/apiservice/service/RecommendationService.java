@@ -53,6 +53,23 @@ public class RecommendationService {
         return Optional.of(page.map(r -> toHistory(r, currentId)));
     }
 
+    /**
+     * Deletes a recommendation row outright (hard delete, not a status change).
+     * Restricted to the 'admin' role at the SecurityFilterChain level (Task 7.2),
+     * added specifically to give Epic 7's 403-insufficient-scope test a real,
+     * useful endpoint to gate rather than a placeholder.
+     *
+     * @return true if a row existed and was deleted, false if no such id existed
+     */
+    @Transactional
+    public boolean deleteRecommendation(Long id) {
+        if (!recommendationRepository.existsById(id)) {
+            return false;
+        }
+        recommendationRepository.deleteById(id);
+        return true;
+    }
+
     private RecommendationSummaryDto toSummary(Recommendation r) {
         return new RecommendationSummaryDto(
             r.getId(),
