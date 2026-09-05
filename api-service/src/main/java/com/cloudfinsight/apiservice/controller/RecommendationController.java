@@ -1,5 +1,6 @@
 package com.cloudfinsight.apiservice.controller;
 
+import com.cloudfinsight.apiservice.dto.ExplanationResponseDto;
 import com.cloudfinsight.apiservice.dto.RecommendationDetailDto;
 import com.cloudfinsight.apiservice.dto.RecommendationSummaryDto;
 import com.cloudfinsight.apiservice.service.RecommendationService;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/recommendations")
 @RequiredArgsConstructor
-@Tag(name = "Recommendations", description = "Recommendation list, detail, and admin management endpoints")
+@Tag(name = "Recommendations", description = "Recommendation list, detail, explanation, and admin management endpoints")
 public class RecommendationController {
 
     private final RecommendationService recommendationService;
@@ -41,6 +43,18 @@ public class RecommendationController {
         description = "Returns full recommendation detail including all candidates, pros/cons, savings, and confidence.")
     public ResponseEntity<RecommendationDetailDto> getRecommendation(@PathVariable Long id) {
         return recommendationService.getRecommendationDetail(id)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/explain")
+    @Operation(summary = "Get an LLM-generated plain-language explanation of a recommendation",
+        description = "Explains the recommendation using pre-computed figures only - the LLM never " +
+                      "calculates savings itself. Cached in Redis for 1 hour per recommendation id; " +
+                      "response includes 'cached': true/false. Returns 503 (not 500) if the LLM " +
+                      "provider is unavailable or rate-limited.")
+    public ResponseEntity<ExplanationResponseDto> explainRecommendation(@PathVariable Long id) {
+        return recommendationService.explainRecommendation(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }

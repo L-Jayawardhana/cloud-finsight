@@ -6,7 +6,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -50,4 +49,15 @@ public interface RecommendationRepository extends JpaRepository<Recommendation, 
         AND r.status = :status
         """)
     Optional<Long> findLatestIdByVirtualMachineIdAndStatus(@Param("vmId") Long vmId, @Param("status") String status);
+
+    /**
+     * Eagerly fetches the VirtualMachine association so the caller can read
+     * currentSku/name outside of any @Transactional block, without a lazy-init
+     * exception. Used by the /explain endpoint (Task 8.2), which deliberately
+     * avoids wrapping the whole cache-check + LLM-call flow in a transaction
+     * (would otherwise hold a DB connection open for the duration of an
+     * external HTTP call to the LLM provider).
+     */
+    @Query("SELECT r FROM Recommendation r JOIN FETCH r.virtualMachine WHERE r.id = :id")
+    Optional<Recommendation> findByIdWithVirtualMachine(@Param("id") Long id);
 }
