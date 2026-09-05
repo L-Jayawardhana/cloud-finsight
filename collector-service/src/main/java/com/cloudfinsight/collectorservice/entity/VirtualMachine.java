@@ -3,6 +3,8 @@ package com.cloudfinsight.collectorservice.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -35,6 +37,12 @@ public class VirtualMachine {
 
     @Column(name = "generation_tag")
     private String generationTag;
+
+    @Column(name = "p95_cpu_percent", precision = 5, scale = 2)
+    private BigDecimal p95CpuPercent;
+
+    @Column(name = "p95_mem_percent", precision = 5, scale = 2)
+    private BigDecimal p95MemPercent;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
