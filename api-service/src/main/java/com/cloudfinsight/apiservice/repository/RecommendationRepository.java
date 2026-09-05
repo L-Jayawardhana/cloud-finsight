@@ -8,10 +8,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface RecommendationRepository extends JpaRepository<Recommendation, Long> {
     List<Recommendation> findByStatus(String status);
     List<Recommendation> findByVirtualMachineId(Long virtualMachineId);
+
+    Page<Recommendation> findByVirtualMachineIdOrderByCreatedAtDesc(Long virtualMachineId, Pageable pageable);
 
     @Query("""
         SELECT r FROM Recommendation r
@@ -40,4 +43,11 @@ public interface RecommendationRepository extends JpaRepository<Recommendation, 
         @Param("vmId") Long vmId,
         @Param("type") String type,
         Pageable pageable);
+
+    @Query("""
+        SELECT MAX(r.id) FROM Recommendation r
+        WHERE r.virtualMachine.id = :vmId
+        AND r.status = :status
+        """)
+    Optional<Long> findLatestIdByVirtualMachineIdAndStatus(@Param("vmId") Long vmId, @Param("status") String status);
 }
