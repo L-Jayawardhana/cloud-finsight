@@ -2,6 +2,7 @@
   "realm": "cloud-finsight",
   "enabled": true,
   "sslRequired": "none",
+  "accessCodeLifespan": 600,
   "roles": {
     "realm": [
       {
@@ -22,9 +23,10 @@
       "protocol": "openid-connect",
       "secret": "dev-client-secret-change-me",
       "directAccessGrantsEnabled": true,
-      "standardFlowEnabled": false,
+      "standardFlowEnabled": true,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["*"],
+      "redirectUris": ["http://localhost:8180/*"],
+      "webOrigins": ["*"],
       "protocolMappers": [
         {
           "name": "audience-mapper",
