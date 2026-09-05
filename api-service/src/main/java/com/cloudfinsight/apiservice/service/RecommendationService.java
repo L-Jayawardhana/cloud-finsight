@@ -2,6 +2,7 @@ package com.cloudfinsight.apiservice.service;
 
 import com.cloudfinsight.apiservice.ai.LlmClient;
 import com.cloudfinsight.apiservice.ai.RecommendationPromptData;
+import com.cloudfinsight.apiservice.ai.SavingsMath;
 import com.cloudfinsight.apiservice.dto.ExplanationResponseDto;
 import com.cloudfinsight.apiservice.dto.RecommendationCandidateDto;
 import com.cloudfinsight.apiservice.dto.RecommendationDetailDto;
@@ -20,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -117,25 +117,14 @@ public class RecommendationService {
     }
 
     private RecommendationPromptData toPromptData(Recommendation r, RecommendationCandidate selected) {
-        BigDecimal savings = r.getEstimatedMonthlySavings();
-        BigDecimal candidateCost = selected.getEstimatedMonthlyCost();
-        BigDecimal savingPercent = BigDecimal.ZERO;
-
-        if (savings != null && candidateCost != null) {
-            BigDecimal currentCost = savings.add(candidateCost);
-            if (currentCost.compareTo(BigDecimal.ZERO) != 0) {
-                savingPercent = savings
-                    .divide(currentCost, 4, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal.valueOf(100))
-                    .setScale(1, RoundingMode.HALF_UP);
-            }
-        }
+        BigDecimal savingPercent = SavingsMath.computeSavingPercent(
+            r.getEstimatedMonthlySavings(), selected.getEstimatedMonthlyCost());
 
         return new RecommendationPromptData(
             r.getVirtualMachine().getName(),
             r.getVirtualMachine().getCurrentSku(),
             selected.getCandidateSku(),
-            savings,
+            r.getEstimatedMonthlySavings(),
             savingPercent,
             r.getConfidenceLevel(),
             splitLines(selected.getPros()),

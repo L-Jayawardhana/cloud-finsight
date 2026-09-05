@@ -3,9 +3,15 @@ package com.cloudfinsight.apiservice.ai;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -26,6 +32,17 @@ public class LlmClient {
             the reasoning behind the recommendation (utilisation headroom, generation,
             relative cost) in a factual, concise tone, and do not make claims not
             supported by the data provided to you.
+            """;
+
+    private static final String CHAT_SYSTEM_PROMPT = """
+            You are a conversational cloud cost advisor embedded in a cloud cost
+            observability platform, answering follow-up questions about a specific VM's
+            recommendation. A separate deterministic rule engine has already computed all
+            figures (utilisation percentages, savings, confidence level) — you explain and
+            discuss them, you never calculate or invent new numbers. If the context below
+            says no recommendation exists yet, say so honestly rather than fabricating one.
+            When asked why a VM was flagged, reference the specific utilisation statistics
+            given in the context, not generic reasoning.
             """;
 
     private final ChatClient chatClient;
@@ -56,6 +73,45 @@ public class LlmClient {
             String response = chatClient.prompt()
                     .system(SYSTEM_PROMPT)
                     .user(userPrompt)
+                    .call()
+                    .content();
+            llmCallSuccessCounter.increment();
+            return response;
+        } catch (RuntimeException ex) {
+            llmCallFailureCounter.increment();
+            throw translate(ex);
+        }
+    }
+
+    /**
+     * Multi-turn chat (Task 8.3). recommendationContext is a dynamically-built
+     * block of facts about the VM's current/most-recent recommendation (or a
+     * "no recommendation yet" note); history is prior turns (oldest first),
+     * capped by the caller (ChatService) to the last 5 exchanges.
+     */
+    @Retryable(
+            includes = LlmRateLimitException.class,
+            maxRetries = 2,
+            delay = 1000,
+            multiplier = 2,
+            maxDelay = 8000
+    )
+    public String chat(String recommendationContext, List<ChatTurn> history, String userMessage) {
+        List<Message> messages = new ArrayList<>();
+        messages.add(new SystemMessage(CHAT_SYSTEM_PROMPT + "\n\n" + recommendationContext));
+
+        for (ChatTurn turn : history) {
+            if ("assistant".equals(turn.role())) {
+                messages.add(new AssistantMessage(turn.content()));
+            } else {
+                messages.add(new UserMessage(turn.content()));
+            }
+        }
+        messages.add(new UserMessage(userMessage));
+
+        try {
+            String response = chatClient.prompt()
+                    .messages(messages)
                     .call()
                     .content();
             llmCallSuccessCounter.increment();
