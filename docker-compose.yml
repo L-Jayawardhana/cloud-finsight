@@ -78,6 +78,25 @@ services:
       timeout: 5s
       retries: 10
 
+  frontend:
+    build:
+      context: ./cloud-finsight-ui
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:3000/api/v1
+        VITE_KEYCLOAK_URL: http://localhost:3000/auth
+        VITE_KEYCLOAK_REALM: cloud-finsight
+        VITE_KEYCLOAK_CLIENT_ID: cloud-finsight-spa
+    container_name: finsight-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"   # Dashboard — http://localhost:3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # lets Nginx reach the host-run api-service on Linux
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:
