@@ -97,7 +97,20 @@ services:
       keycloak:
         condition: service_healthy
 
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: finsight-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"   # Prometheus UI — http://localhost:9090
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # lets Prometheus scrape the host-run api-service/collector-service on Linux
+
 volumes:
   postgres_data:
   redis_data:
   rabbitmq_data:
+  prometheus_data:

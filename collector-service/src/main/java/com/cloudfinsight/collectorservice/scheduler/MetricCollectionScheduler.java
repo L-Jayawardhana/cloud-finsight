@@ -7,6 +7,7 @@ import com.cloudfinsight.collectorservice.mapper.MetricSnapshotMapper;
 import com.cloudfinsight.collectorservice.repository.MetricSnapshotRepository;
 import com.cloudfinsight.collectorservice.repository.VirtualMachineRepository;
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -33,6 +34,7 @@ public class MetricCollectionScheduler {
     private final Counter collectionCycleSuccessCounter;
     private final Counter collectionCycleFailureCounter;
     private final AtomicLong lastCollectionCycleTimestamp;
+    private final MeterRegistry meterRegistry;
 
     @Scheduled(fixedDelayString = "${collector.interval-ms}")
     public void collectMetrics() {
@@ -51,6 +53,7 @@ public class MetricCollectionScheduler {
                     memoryPoint.ifPresent(rawPoints::add);
                 } catch (Exception memEx) {
                     log.warn("Memory usage query failed for VM {}: {}", vm.getName(), memEx.getMessage());
+                    meterRegistry.counter("collector.errors.total", "source", "azure_monitor").increment();
                 }
 
                 List<MetricSnapshot> snapshots = mapper.toEntities(vm, rawPoints);
@@ -61,6 +64,7 @@ public class MetricCollectionScheduler {
             } catch (Exception ex) {
                 log.warn("Metric collection failed for VM {}: {}", vm.getName(), ex.getMessage());
                 collectionCycleFailureCounter.increment();
+                meterRegistry.counter("collector.errors.total", "source", "azure_monitor").increment();
             }
         }
 
