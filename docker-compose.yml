@@ -78,6 +78,83 @@ services:
       timeout: 5s
       retries: 10
 
+  api-service:
+    build:
+      context: ./api-service
+      dockerfile: Dockerfile
+    container_name: finsight-api-service
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-finsight}
+      POSTGRES_USER: ${POSTGRES_USER:-finsight_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER:-finsight_user}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/cloud-finsight
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    ports:
+      - "8080:8080"   # api-service — http://localhost:8080
+    volumes:
+      - ./api-service/logs:/app/logs
+    mem_limit: 512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  collector-service:
+    build:
+      context: ./collector-service
+      dockerfile: Dockerfile
+    container_name: finsight-collector-service
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-finsight}
+      POSTGRES_USER: ${POSTGRES_USER:-finsight_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER:-finsight_user}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      # AzureCliCredential shells out to `az`, which reads its login cache from here.
+      AZURE_CONFIG_DIR: /root/.azure
+    ports:
+      - "8081:8081"   # collector-service — http://localhost:8081
+    volumes:
+      - ./collector-service/logs:/app/logs
+      - ${HOME}/.azure:/root/.azure
+    mem_limit: 512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
   frontend:
     build:
       context: ./cloud-finsight-ui
@@ -91,9 +168,9 @@ services:
     restart: unless-stopped
     ports:
       - "3000:80"   # Dashboard — http://localhost:3000
-    extra_hosts:
-      - "host.docker.internal:host-gateway" # lets Nginx reach the host-run api-service on Linux
     depends_on:
+      api-service:
+        condition: service_healthy
       keycloak:
         condition: service_healthy
 
@@ -106,8 +183,11 @@ services:
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"   # Prometheus UI — http://localhost:9090
-    extra_hosts:
-      - "host.docker.internal:host-gateway" # lets Prometheus scrape the host-run api-service/collector-service on Linux
+    depends_on:
+      api-service:
+        condition: service_healthy
+      collector-service:
+        condition: service_healthy
 
   grafana:
     image: grafana/grafana:11.4.0

@@ -5,9 +5,9 @@ scrape_configs:
   - job_name: api-service
     metrics_path: /actuator/prometheus
     static_configs:
-      - targets: ["host.docker.internal:8080"]
+      - targets: ["api-service:8080"]
 
   - job_name: collector-service
     metrics_path: /actuator/prometheus
     static_configs:
-      - targets: ["host.docker.internal:8081"]
+      - targets: ["collector-service:8081"]
