@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { sendChatMessage } from './chat'
-import { getCostSummary, getRecommendationHistory, getVms } from './dashboard'
+import { getCostSummary, getRecommendationHistory, getUtilisation, getVms } from './dashboard'
 import {
   deleteRecommendation,
   explainRecommendation,
@@ -53,6 +53,14 @@ export function useRecommendationHistory(vmId: number, page = 0, size = 10) {
   return useQuery({
     queryKey: ['recommendation-history', vmId, page, size],
     queryFn: () => getRecommendationHistory(vmId, page, size),
+    enabled: Number.isFinite(vmId),
+  })
+}
+
+export function useUtilisation(vmId: number, days = 14) {
+  return useQuery({
+    queryKey: ['utilisation', vmId, days],
+    queryFn: () => getUtilisation(vmId, days),
     enabled: Number.isFinite(vmId),
   })
 }

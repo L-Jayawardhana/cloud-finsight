@@ -40,26 +40,47 @@ export interface RecommendationCandidate {
   id: number
   candidateSku: string
   generationTag: string
+  vcpuCount: number | null
+  memoryGb: number | null
   estimatedMonthlyCost: number
   reliabilityScore: number | null
   performanceScore: number | null
   pros: string
   cons: string
   selected: boolean
+  twoInstanceFeasible: boolean | null
+  twoInstanceMonthlyCost: number | null
+  twoInstanceMonthlySaving: number | null
 }
 
 export interface RecommendationDetail {
   id: number
   vmId: number
   vmName: string
-  recommendationType: string
-  confidenceLevel: string
+  currentSku: string
+  currentGenerationTag: string | null
+  currentVcpuCount: number | null
+  currentMemoryGb: number | null
+  currentMonthlyPrice: number | null
+  recommendationType: RecommendationType
+  confidenceLevel: ConfidenceLevel
   confidenceScore: number | null
+  dataCoverageDays: number | null
   estimatedMonthlySavings: number | null
   status: string
   summary: string
   createdAt: string
   candidates: RecommendationCandidate[]
+}
+
+export interface UtilisationPoint {
+  date: string
+  cpuP50: number | null
+  cpuP95: number | null
+  cpuMax: number | null
+  memP50: number | null
+  memP95: number | null
+  memMax: number | null
 }
 
 export interface RecommendationHistoryEntry {

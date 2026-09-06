@@ -2,6 +2,7 @@ package com.cloudfinsight.apiservice.controller;
 
 import com.cloudfinsight.apiservice.dto.CostSummaryDto;
 import com.cloudfinsight.apiservice.dto.RecommendationHistoryDto;
+import com.cloudfinsight.apiservice.dto.UtilisationPointDto;
 import com.cloudfinsight.apiservice.dto.VmSummaryDto;
 import com.cloudfinsight.apiservice.service.DashboardService;
 import com.cloudfinsight.apiservice.service.RecommendationService;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -47,6 +49,18 @@ public class DashboardController {
         Pageable pageable
     ) {
         return recommendationService.getRecommendationHistory(vmId, pageable)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/vms/{vmId}/utilisation")
+    @Operation(summary = "Get a VM's utilisation time series",
+        description = "Returns per-day p50/p95/max CPU and memory utilisation over a trailing window (default 14 days), computed from raw metric snapshots.")
+    public ResponseEntity<List<UtilisationPointDto>> getUtilisation(
+        @PathVariable Long vmId,
+        @RequestParam(defaultValue = "14") int days
+    ) {
+        return dashboardService.getUtilisation(vmId, days)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }

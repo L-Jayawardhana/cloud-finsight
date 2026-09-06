@@ -1,5 +1,5 @@
 import { httpClient } from './httpClient'
-import type { CostSummary, Page, RecommendationHistoryEntry, VmSummary } from './types'
+import type { CostSummary, Page, RecommendationHistoryEntry, UtilisationPoint, VmSummary } from './types'
 
 export async function getVms(): Promise<VmSummary[]> {
   const { data } = await httpClient.get<VmSummary[]>('/vms')
@@ -20,5 +20,12 @@ export async function getRecommendationHistory(
     `/vms/${vmId}/recommendations/history`,
     { params: { page, size } },
   )
+  return data
+}
+
+export async function getUtilisation(vmId: number, days = 14): Promise<UtilisationPoint[]> {
+  const { data } = await httpClient.get<UtilisationPoint[]>(`/vms/${vmId}/utilisation`, {
+    params: { days },
+  })
   return data
 }
