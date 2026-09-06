@@ -109,8 +109,25 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway" # lets Prometheus scrape the host-run api-service/collector-service on Linux
 
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: finsight-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    ports:
+      - "3001:3000"   # Grafana UI — http://localhost:3001 (3000 is taken by the frontend)
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   redis_data:
   rabbitmq_data:
   prometheus_data:
+  grafana_data:
