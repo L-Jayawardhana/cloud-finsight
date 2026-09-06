@@ -8,11 +8,16 @@ import com.cloudfinsight.apiservice.dto.RecommendationCandidateDto;
 import com.cloudfinsight.apiservice.dto.RecommendationDetailDto;
 import com.cloudfinsight.apiservice.dto.RecommendationHistoryDto;
 import com.cloudfinsight.apiservice.dto.RecommendationSummaryDto;
+import com.cloudfinsight.apiservice.entity.MetricSnapshot;
 import com.cloudfinsight.apiservice.entity.Recommendation;
 import com.cloudfinsight.apiservice.entity.RecommendationCandidate;
+import com.cloudfinsight.apiservice.entity.VmSkuCatalogueEntry;
+import com.cloudfinsight.apiservice.repository.MetricSnapshotRepository;
+import com.cloudfinsight.apiservice.repository.PricingSnapshotRepository;
 import com.cloudfinsight.apiservice.repository.RecommendationCandidateRepository;
 import com.cloudfinsight.apiservice.repository.RecommendationRepository;
 import com.cloudfinsight.apiservice.repository.VirtualMachineRepository;
+import com.cloudfinsight.apiservice.repository.VmSkuCatalogueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -33,10 +39,15 @@ public class RecommendationService {
     private static final String PENDING_STATUS = "PENDING";
     private static final String EXPLANATION_CACHE_KEY_PREFIX = "explain:";
     private static final Duration EXPLANATION_CACHE_TTL = Duration.ofHours(1);
+    private static final BigDecimal HOURS_PER_MONTH = BigDecimal.valueOf(730);
+    private static final int UTILISATION_WINDOW_DAYS = 14;
 
     private final RecommendationRepository recommendationRepository;
     private final RecommendationCandidateRepository recommendationCandidateRepository;
     private final VirtualMachineRepository virtualMachineRepository;
+    private final VmSkuCatalogueRepository vmSkuCatalogueRepository;
+    private final PricingSnapshotRepository pricingSnapshotRepository;
+    private final MetricSnapshotRepository metricSnapshotRepository;
     private final StringRedisTemplate redisTemplate;
     private final LlmClient llmClient;
 
@@ -183,34 +194,87 @@ public class RecommendationService {
     }
 
     private RecommendationDetailDto toDetail(Recommendation r) {
+        String currentSku = r.getVirtualMachine().getCurrentSku();
+        VmSkuCatalogueEntry currentSkuInfo = vmSkuCatalogueRepository.findByArmSkuName(currentSku).orElse(null);
+        BigDecimal currentMonthlyPrice = pricingSnapshotRepository
+            .findFirstByArmSkuNameAndRegionOrderByCollectedAtDesc(currentSku, r.getVirtualMachine().getRegion())
+            .map(snapshot -> snapshot.getRetailPrice().multiply(HOURS_PER_MONTH))
+            .orElse(null);
+        Integer dataCoverageDays = computeDataCoverageDays(r.getVirtualMachine().getId());
+
         List<RecommendationCandidateDto> candidates = recommendationCandidateRepository
             .findByRecommendationId(r.getId())
             .stream()
-            .map(c -> new RecommendationCandidateDto(
-                c.getId(),
-                c.getCandidateSku(),
-                c.getGenerationTag(),
-                c.getEstimatedMonthlyCost(),
-                c.getReliabilityScore(),
-                c.getPerformanceScore(),
-                c.getPros(),
-                c.getCons(),
-                c.isSelected()
-            ))
+            .map(c -> toCandidateDto(c, currentMonthlyPrice))
             .toList();
 
         return new RecommendationDetailDto(
             r.getId(),
             r.getVirtualMachine().getId(),
             r.getVirtualMachine().getName(),
+            currentSku,
+            currentSkuInfo != null ? currentSkuInfo.getGeneration() : null,
+            currentSkuInfo != null ? currentSkuInfo.getVcpuCount() : null,
+            currentSkuInfo != null ? currentSkuInfo.getMemoryGb() : null,
+            currentMonthlyPrice,
             r.getRecommendationType(),
             r.getConfidenceLevel(),
             r.getConfidenceScore(),
+            dataCoverageDays,
             r.getEstimatedMonthlySavings(),
             r.getStatus(),
             r.getSummary(),
             r.getCreatedAt(),
             candidates
         );
+    }
+
+    private RecommendationCandidateDto toCandidateDto(RecommendationCandidate c, BigDecimal currentMonthlyPrice) {
+        VmSkuCatalogueEntry candidateSkuInfo = vmSkuCatalogueRepository.findByArmSkuName(c.getCandidateSku()).orElse(null);
+
+        Boolean twoInstanceFeasible = null;
+        BigDecimal twoInstanceMonthlyCost = null;
+        BigDecimal twoInstanceMonthlySaving = null;
+        if (currentMonthlyPrice != null && c.getEstimatedMonthlyCost() != null) {
+            twoInstanceMonthlyCost = c.getEstimatedMonthlyCost().multiply(BigDecimal.valueOf(2));
+            twoInstanceFeasible = twoInstanceMonthlyCost.compareTo(currentMonthlyPrice) <= 0;
+            twoInstanceMonthlySaving = currentMonthlyPrice.subtract(twoInstanceMonthlyCost);
+        }
+
+        return new RecommendationCandidateDto(
+            c.getId(),
+            c.getCandidateSku(),
+            c.getGenerationTag(),
+            candidateSkuInfo != null ? candidateSkuInfo.getVcpuCount() : null,
+            candidateSkuInfo != null ? candidateSkuInfo.getMemoryGb() : null,
+            c.getEstimatedMonthlyCost(),
+            c.getReliabilityScore(),
+            c.getPerformanceScore(),
+            c.getPros(),
+            c.getCons(),
+            c.isSelected(),
+            twoInstanceFeasible,
+            twoInstanceMonthlyCost,
+            twoInstanceMonthlySaving
+        );
+    }
+
+    private Integer computeDataCoverageDays(Long vmId) {
+        OffsetDateTime end = OffsetDateTime.now();
+        OffsetDateTime start = end.minusDays(UTILISATION_WINDOW_DAYS);
+        List<MetricSnapshot> snapshots = metricSnapshotRepository
+            .findByVirtualMachineIdAndCollectedAtBetween(vmId, start, end);
+        if (snapshots.isEmpty()) {
+            return null;
+        }
+        OffsetDateTime earliest = snapshots.stream()
+            .map(MetricSnapshot::getCollectedAt)
+            .min(OffsetDateTime::compareTo)
+            .orElseThrow();
+        OffsetDateTime latest = snapshots.stream()
+            .map(MetricSnapshot::getCollectedAt)
+            .max(OffsetDateTime::compareTo)
+            .orElseThrow();
+        return (int) Math.max(Duration.between(earliest, latest).toDays(), 1);
     }
 }

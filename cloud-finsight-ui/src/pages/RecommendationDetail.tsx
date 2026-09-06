@@ -1,20 +1,29 @@
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { useChatMessage, useExplainRecommendation, useRecommendation } from '../api/queries'
-import type { ChatMessage } from '../api/types'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useRecommendation, useUtilisation } from '../api/queries'
+import { AiExplanationPanel } from '../components/AiExplanationPanel'
+import { ChatPanel } from '../components/ChatPanel'
+import { ConfidenceIndicator } from '../components/ConfidenceIndicator'
 import { DashboardLayout } from '../components/DashboardLayout'
-import { formatCurrency, formatDate, formatScore } from '../lib/format'
+import { ProsConsList } from '../components/ProsConsList'
+import { SavingsBreakdownCard } from '../components/SavingsBreakdownCard'
+import { SkuComparisonTable } from '../components/SkuComparisonTable'
+import { UtilisationChart } from '../components/UtilisationChart'
 
 export function RecommendationDetail() {
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
   const recommendationId = Number(id)
   const recommendation = useRecommendation(recommendationId)
-  const explain = useExplainRecommendation(recommendationId)
+  const utilisation = useUtilisation(recommendation.data?.vmId ?? NaN)
+  const autoExplain = searchParams.get('explain') === '1'
 
   if (recommendation.isLoading) {
     return (
       <DashboardLayout>
-        <p>Loading recommendation…</p>
+        <div className="recommendation-detail-layout">
+          <div className="skeleton skeleton-card-lg" />
+          <div className="skeleton skeleton-card-lg" />
+        </div>
       </DashboardLayout>
     )
   }
@@ -29,6 +38,7 @@ export function RecommendationDetail() {
   }
 
   const rec = recommendation.data
+  const selected = rec.candidates.find((c) => c.selected) ?? rec.candidates[0]
 
   return (
     <DashboardLayout>
@@ -36,115 +46,40 @@ export function RecommendationDetail() {
       <h1>
         {rec.recommendationType} — {rec.vmName}
       </h1>
-      <p className="rec-meta">
-        Status: {rec.status} · Confidence: {rec.confidenceLevel} (score{' '}
-        {formatScore(rec.confidenceScore)}) · Created {formatDate(rec.createdAt)}
-      </p>
-      <p>{rec.summary}</p>
-      <p className="savings-highlight">
-        Estimated savings: {formatCurrency(rec.estimatedMonthlySavings)}/month
-      </p>
 
-      <section>
-        <h2>Candidates</h2>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>SKU</th>
-              <th>Generation</th>
-              <th>Monthly cost</th>
-              <th>Reliability</th>
-              <th>Performance</th>
-              <th>Pros</th>
-              <th>Cons</th>
-              <th>Selected</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rec.candidates.map((candidate) => (
-              <tr key={candidate.id} className={candidate.selected ? 'row-selected' : ''}>
-                <td>{candidate.candidateSku}</td>
-                <td>{candidate.generationTag}</td>
-                <td>{formatCurrency(candidate.estimatedMonthlyCost)}</td>
-                <td>{formatScore(candidate.reliabilityScore)}</td>
-                <td>{formatScore(candidate.performanceScore)}</td>
-                <td>{candidate.pros}</td>
-                <td>{candidate.cons}</td>
-                <td>{candidate.selected ? '✓' : ''}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <div className="recommendation-detail-layout">
+        <div className="recommendation-detail-column">
+          <ConfidenceIndicator confidenceLevel={rec.confidenceLevel} dataCoverageDays={rec.dataCoverageDays} />
+          <p>{rec.summary}</p>
 
-      <section>
-        <h2>Explain this recommendation</h2>
-        <button type="button" onClick={() => explain.mutate()} disabled={explain.isPending}>
-          {explain.isPending ? 'Asking…' : 'Explain in plain language'}
-        </button>
-        {explain.isError && <p className="error-text">Couldn't generate an explanation right now.</p>}
-        {explain.data && (
-          <p className="explanation-text">
-            {explain.data.explanation}
-            {explain.data.cached && <span className="cached-badge"> (cached)</span>}
-          </p>
-        )}
-      </section>
+          <section>
+            <h2>SKU comparison</h2>
+            <SkuComparisonTable rec={rec} />
+          </section>
 
-      <ChatPanel vmId={rec.vmId} />
-    </DashboardLayout>
-  )
-}
+          <section>
+            <h2>Savings breakdown</h2>
+            <SavingsBreakdownCard rec={rec} />
+          </section>
 
-function ChatPanel({ vmId }: { vmId: number }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [draft, setDraft] = useState('')
-  const chat = useChatMessage()
+          {selected && (
+            <section>
+              <h2>Pros &amp; cons</h2>
+              <ProsConsList pros={selected.pros} cons={selected.cons} />
+            </section>
+          )}
 
-  const handleSend = () => {
-    const text = draft.trim()
-    if (!text) return
-    setMessages((prev) => [...prev, { role: 'user', content: text }])
-    setDraft('')
-    chat.mutate(
-      { vmId, message: text },
-      {
-        onSuccess: (response) => {
-          setMessages((prev) => [...prev, { role: 'assistant', content: response.reply }])
-        },
-      },
-    )
-  }
+          <section>
+            <h2>Utilisation (trailing 14 days)</h2>
+            <UtilisationChart data={utilisation.data} loading={utilisation.isLoading} />
+          </section>
+        </div>
 
-  return (
-    <section>
-      <h2>Ask a follow-up question</h2>
-      <div className="chat-history">
-        {messages.map((message, index) => (
-          <p key={index} className={`chat-message chat-message-${message.role}`}>
-            <strong>{message.role === 'user' ? 'You' : 'Assistant'}:</strong> {message.content}
-          </p>
-        ))}
-        {chat.isPending && <p className="chat-message chat-message-assistant">Thinking…</p>}
-        {chat.isError && <p className="error-text">Something went wrong. Try again.</p>}
+        <div className="recommendation-detail-column">
+          <AiExplanationPanel recommendationId={rec.id} autoTrigger={autoExplain} />
+          <ChatPanel vmId={rec.vmId} />
+        </div>
       </div>
-      <form
-        className="chat-input"
-        onSubmit={(event) => {
-          event.preventDefault()
-          handleSend()
-        }}
-      >
-        <input
-          type="text"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="Why is this recommendation lower confidence?"
-        />
-        <button type="submit" disabled={chat.isPending || !draft.trim()}>
-          Send
-        </button>
-      </form>
-    </section>
+    </DashboardLayout>
   )
 }
