@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { sendChatMessage } from './chat'
 import { getCostSummary, getRecommendationHistory, getVms } from './dashboard'
 import {
@@ -22,6 +23,22 @@ export function useRecommendations(params: ListRecommendationsParams = {}) {
     queryKey: ['recommendations', params],
     queryFn: () => listRecommendations(params),
   })
+}
+
+// listRecommendations returns at most one (the latest pending) recommendation per VM,
+// so a page this size covers realistic fleet sizes without needing a dedicated count endpoint.
+const RECOMMENDATION_COUNT_PAGE_SIZE = 500
+
+export function useVmRecommendationCounts() {
+  const { data, isLoading } = useRecommendations({ size: RECOMMENDATION_COUNT_PAGE_SIZE })
+  const counts = useMemo(() => {
+    const map = new Map<number, number>()
+    data?.content.forEach((rec) => {
+      map.set(rec.vmId, (map.get(rec.vmId) ?? 0) + 1)
+    })
+    return map
+  }, [data])
+  return { counts, isLoading }
 }
 
 export function useRecommendation(id: number) {
