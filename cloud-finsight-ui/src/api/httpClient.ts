@@ -17,3 +17,13 @@ httpClient.interceptors.request.use(async (config) => {
   }
   return config
 })
+
+httpClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      keycloak.login()
+    }
+    return Promise.reject(error)
+  },
+)
