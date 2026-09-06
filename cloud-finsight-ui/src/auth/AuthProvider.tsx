@@ -21,7 +21,10 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-const CALLBACK_PATH = '/auth/callback'
+// Deliberately NOT under /auth/* - nginx proxies that whole prefix to
+// Keycloak (see nginx.conf), so a route there would 404 instead of
+// reaching this SPA route.
+const CALLBACK_PATH = '/sso/callback'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false)

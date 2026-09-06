@@ -33,9 +33,9 @@ function MetricChart({
           <YAxis tick={{ fontSize: 12 }} unit="%" width={44} />
           <Tooltip />
           <Legend />
-          <Line type="monotone" dataKey={p50Key} name="p50" stroke="#3b82f6" dot={false} />
-          <Line type="monotone" dataKey={p95Key} name="p95" stroke="#f59e0b" dot={false} />
-          <Line type="monotone" dataKey={maxKey} name="max" stroke="#dc2626" dot={false} />
+          <Line type="monotone" dataKey={p50Key} name="p50" stroke="#0f6e4f" dot={false} />
+          <Line type="monotone" dataKey={p95Key} name="p95" stroke="#9c6b0b" dot={false} />
+          <Line type="monotone" dataKey={maxKey} name="max" stroke="#a8401d" dot={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>

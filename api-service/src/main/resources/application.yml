@@ -5,7 +5,11 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/cloud-finsight}
+          # Where signing keys are actually fetched from - separate from
+          # issuer validation below so it can point at a different address
+          # than the "iss" claim when Keycloak sits behind a reverse proxy
+          # (see docker-compose.yml and SecurityConfig.jwtDecoder()).
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/auth/realms/cloud-finsight/protocol/openid-connect/certs}
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/${POSTGRES_DB:finsight}
     username: ${POSTGRES_USER:finsight_user}
@@ -32,6 +36,15 @@ spring:
         api-key: ${GEMINI_API_KEY}
         chat:
           model: gemini-3.6-flash
+
+app:
+  security:
+    # Locally, the same Keycloak is reachable two ways depending on which
+    # frontend dev flow is in use: directly on :8180 (host-run Vite dev
+    # server) or through the frontend's nginx proxy on :3000/auth (the
+    # fully-dockerized stack) - each mints tokens with a different "iss"
+    # claim, so both are trusted here rather than picking one.
+    allowed-issuers: ${KEYCLOAK_ALLOWED_ISSUERS:http://localhost:8180/auth/realms/cloud-finsight,http://localhost:3000/auth/realms/cloud-finsight}
 
 management:
   endpoints:

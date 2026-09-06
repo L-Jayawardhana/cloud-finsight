@@ -9,7 +9,7 @@ import { RecommendationsPage } from './pages/RecommendationsPage'
 function App() {
   return (
     <Routes>
-      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/sso/callback" element={<AuthCallback />} />
       <Route
         path="/"
         element={

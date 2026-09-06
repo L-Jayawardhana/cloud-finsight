@@ -12,7 +12,7 @@ must never be committed.
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | postgres, api-service, collector-service, keycloak | Pick any values — these just define the local database's credentials on first startup. |
 | `REDIS_PASSWORD` | redis, api-service, collector-service | Pick any value. |
 | `RABBITMQ_USER` / `RABBITMQ_PASSWORD` | rabbitmq, api-service, collector-service | Pick any values. |
-| `KEYCLOAK_ADMIN_USER` / `KEYCLOAK_ADMIN_PASSWORD` | keycloak | Pick any values — bootstraps the admin console login at http://localhost:8180. |
+| `KEYCLOAK_ADMIN_USER` / `KEYCLOAK_ADMIN_PASSWORD` | keycloak | Pick any values — bootstraps the admin console login at http://localhost:8180/auth. |
 | `GEMINI_API_KEY` | api-service (`/explain`, `/chat` endpoints) | Create a free key at [Google AI Studio](https://aistudio.google.com/apikey). |
 | `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` | grafana | Pick any values — bootstraps the admin login at http://localhost:3001. |
 
