@@ -3,6 +3,7 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AuthCallback } from './pages/AuthCallback'
 import { Dashboard } from './pages/Dashboard'
 import { RecommendationDetail } from './pages/RecommendationDetail'
+import { RecommendationsPage } from './pages/RecommendationsPage'
 
 function App() {
   return (
@@ -13,6 +14,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/recommendations"
+        element={
+          <ProtectedRoute>
+            <RecommendationsPage />
           </ProtectedRoute>
         }
       />
