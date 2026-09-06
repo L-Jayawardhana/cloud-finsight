@@ -20,59 +20,69 @@ export function RecommendationCard({ rec }: { rec: RecommendationSummary }) {
 
   return (
     <div className="recommendation-card">
-      <div>
-        <div className="recommendation-card-sku">
-          <strong>{rec.vmName}</strong>
-          <span className={TYPE_BADGE_CLASS[rec.recommendationType]}>{rec.recommendationType}</span>
+      <div className="recommendation-card-header">
+        <div>
+          <span className="recommendation-card-vm">{rec.vmName}</span>
+          <div className="recommendation-card-sku-line">
+            <span>{rec.currentSku}</span>
+            <span className="recommendation-card-arrow">→</span>
+            <span>{rec.candidateSku ?? '—'}</span>
+          </div>
         </div>
-        <div className="recommendation-card-sku">
-          <span>{rec.currentSku}</span>
-          <span>→</span>
-          <span>{rec.candidateSku ?? '—'}</span>
-          {rec.generationTag && (
-            <span className={`badge ${isOlderGen ? 'badge-generation-older' : 'badge-generation-current'}`}>
-              {isOlderGen ? 'OLDER-GEN' : 'CURRENT'}
-            </span>
-          )}
-        </div>
+        <span className={TYPE_BADGE_CLASS[rec.recommendationType]}>{rec.recommendationType}</span>
       </div>
 
-      <div>
+      <div className="recommendation-card-savings">
         {savings == null && <span className="rec-meta">Savings not yet estimated</span>}
         {savings != null && savings > 0 && (
-          <span className="saving-badge">
-            💰 {formatCurrency(savings)}/mo · {rec.savingPercent}% saving
-          </span>
+          <>
+            <span className="recommendation-card-savings-value">{formatCurrency(savings)}</span>
+            <span className="recommendation-card-savings-sub">/mo · {rec.savingPercent}% saving</span>
+          </>
         )}
         {savings != null && savings < 0 && (
-          <span className="cost-increase-badge">
-            📈 {formatCurrency(Math.abs(savings))}/mo more
-          </span>
+          <>
+            <span className="recommendation-card-savings-value recommendation-card-savings-negative">
+              {formatCurrency(Math.abs(savings))}
+            </span>
+            <span className="recommendation-card-savings-sub">/mo more</span>
+          </>
         )}
         {savings === 0 && <span className="rec-meta">No cost change</span>}
       </div>
 
-      <span className={CONFIDENCE_BADGE_CLASS[rec.confidenceLevel]}>{rec.confidenceLevel}</span>
-
-      <div className="tag-list">
-        {rec.pros.slice(0, 2).map((pro, index) => (
-          <span key={`pro-${index}`} className="tag tag-pro" title={pro}>
-            {pro}
+      <div className="recommendation-card-meta-row">
+        <span className={CONFIDENCE_BADGE_CLASS[rec.confidenceLevel]}>{rec.confidenceLevel}</span>
+        {rec.generationTag && (
+          <span className={`badge ${isOlderGen ? 'badge-generation-older' : 'badge-generation-current'}`}>
+            {isOlderGen ? 'OLDER-GEN' : 'CURRENT'}
           </span>
-        ))}
-        {rec.cons.slice(0, 1).map((con, index) => (
-          <span key={`con-${index}`} className="tag tag-con" title={con}>
-            {con}
-          </span>
-        ))}
+        )}
       </div>
+
+      <ul className="pros-list">
+        {rec.pros.slice(0, 2).map((pro, index) => (
+          <li key={`pro-${index}`} title={pro}>
+            ✓ {pro}
+          </li>
+        ))}
+      </ul>
+      <ul className="cons-list">
+        {rec.cons.slice(0, 1).map((con, index) => (
+          <li key={`con-${index}`} title={con}>
+            ⚠ {con}
+          </li>
+        ))}
+      </ul>
 
       <div className="card-actions">
         <Link to={`/recommendations/${rec.id}`}>
           <button type="button">View Details</button>
         </Link>
         <Link to={`/recommendations/${rec.id}?explain=1`}>
-          <button type="button">Explain with AI</button>
+          <button type="button" className="button-primary">
+            Explain with AI
+          </button>
         </Link>
       </div>
     </div>
