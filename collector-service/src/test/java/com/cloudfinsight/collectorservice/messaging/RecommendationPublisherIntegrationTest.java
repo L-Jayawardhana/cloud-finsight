@@ -108,8 +108,8 @@ class RecommendationPublisherIntegrationTest {
         assertThat(received.estimatedMonthlySavings()).isEqualByComparingTo("49.06");
 
         awaitConfirm();
-        assertThat(meterRegistry.counter("recommendations.published.success").count()).isEqualTo(1.0);
-        assertThat(meterRegistry.counter("recommendations.published.failure").count()).isEqualTo(0.0);
+        assertThat(meterRegistry.counter("recommendations.published.total", "result", "success").count()).isEqualTo(1.0);
+        assertThat(meterRegistry.counter("recommendations.published.total", "result", "failure").count()).isEqualTo(0.0);
     }
 
     @Test
