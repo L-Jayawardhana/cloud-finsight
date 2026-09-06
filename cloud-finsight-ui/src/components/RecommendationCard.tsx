@@ -1,11 +1,17 @@
 import { Link } from 'react-router-dom'
-import type { ConfidenceLevel, RecommendationSummary } from '../api/types'
+import type { ConfidenceLevel, RecommendationSummary, RecommendationType } from '../api/types'
 import { formatCurrency } from '../lib/format'
 
 const CONFIDENCE_BADGE_CLASS: Record<ConfidenceLevel, string> = {
   HIGH: 'badge badge-confidence-high',
   MEDIUM: 'badge badge-confidence-medium',
   LOW: 'badge badge-confidence-low',
+}
+
+const TYPE_BADGE_CLASS: Record<RecommendationType, string> = {
+  DOWNSIZE: 'badge badge-type-downsize',
+  UPSIZE: 'badge badge-type-upsize',
+  CROSS_GENERATION: 'badge badge-type-cross_generation',
 }
 
 export function RecommendationCard({ rec }: { rec: RecommendationSummary }) {
@@ -15,7 +21,10 @@ export function RecommendationCard({ rec }: { rec: RecommendationSummary }) {
   return (
     <div className="recommendation-card">
       <div>
-        <strong>{rec.vmName}</strong>
+        <div className="recommendation-card-sku">
+          <strong>{rec.vmName}</strong>
+          <span className={TYPE_BADGE_CLASS[rec.recommendationType]}>{rec.recommendationType}</span>
+        </div>
         <div className="recommendation-card-sku">
           <span>{rec.currentSku}</span>
           <span>→</span>

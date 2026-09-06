@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AuthCallback } from './pages/AuthCallback'
+import { ChatPage } from './pages/ChatPage'
 import { Dashboard } from './pages/Dashboard'
 import { RecommendationDetail } from './pages/RecommendationDetail'
 import { RecommendationsPage } from './pages/RecommendationsPage'
@@ -30,6 +31,14 @@ function App() {
         element={
           <ProtectedRoute>
             <RecommendationDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/chat"
+        element={
+          <ProtectedRoute>
+            <ChatPage />
           </ProtectedRoute>
         }
       />

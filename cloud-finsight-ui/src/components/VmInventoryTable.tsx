@@ -118,36 +118,38 @@ export function VmInventoryTable({ vms, loading, isError, recommendationCounts }
 
       {!loading && !isError && vms && vms.length > 0 && (
         <>
-          <table className="data-table">
-            <thead>
-              <tr>
-                {COLUMNS.map((column) => (
-                  <th key={column.key} className="sortable-th" onClick={() => handleSort(column.key)}>
-                    {column.label}
-                    {sortKey === column.key && (
-                      <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>
-                    )}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sortedRows.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.name}</td>
-                  <td>{row.sku}</td>
-                  <td>{row.region}</td>
-                  <td>{formatCurrency(row.currentMonthlyPrice)}</td>
-                  <td>{formatPercent(row.p95CpuPercent)}</td>
-                  <td>{formatPercent(row.p95MemPercent)}</td>
-                  <td>
-                    <span className={STATUS_BADGE_CLASS[row.status]}>{row.status}</span>
-                  </td>
-                  <td>{row.recommendationCount}</td>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  {COLUMNS.map((column) => (
+                    <th key={column.key} className="sortable-th" onClick={() => handleSort(column.key)}>
+                      {column.label}
+                      {sortKey === column.key && (
+                        <span className="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sortedRows.map((row) => (
+                  <tr key={row.id}>
+                    <td>{row.name}</td>
+                    <td>{row.sku}</td>
+                    <td>{row.region}</td>
+                    <td>{formatCurrency(row.currentMonthlyPrice)}</td>
+                    <td>{formatPercent(row.p95CpuPercent)}</td>
+                    <td>{formatPercent(row.p95MemPercent)}</td>
+                    <td>
+                      <span className={STATUS_BADGE_CLASS[row.status]}>{row.status}</span>
+                    </td>
+                    <td>{row.recommendationCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {sortedRows.length === 0 && <p className="rec-meta">No VMs match "{search}".</p>}
         </>
       )}
