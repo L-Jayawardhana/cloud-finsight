@@ -5,7 +5,6 @@ import com.cloudfinsight.collectorservice.entity.Recommendation;
 import com.cloudfinsight.collectorservice.entity.RecommendationCandidate;
 import com.cloudfinsight.collectorservice.model.RecommendationMessage;
 import com.cloudfinsight.collectorservice.repository.RecommendationCandidateRepository;
-import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
@@ -26,20 +25,14 @@ public class RecommendationPublisher {
 
     private final RabbitTemplate rabbitTemplate;
     private final RecommendationCandidateRepository recommendationCandidateRepository;
-    private final Counter publishedSuccessCounter;
-    private final Counter publishedFailureCounter;
+    private final MeterRegistry meterRegistry;
 
     public RecommendationPublisher(RabbitTemplate rabbitTemplate,
                                     RecommendationCandidateRepository recommendationCandidateRepository,
                                     MeterRegistry meterRegistry) {
         this.rabbitTemplate = rabbitTemplate;
         this.recommendationCandidateRepository = recommendationCandidateRepository;
-        this.publishedSuccessCounter = Counter.builder("recommendations.published.success")
-            .description("Recommendation messages confirmed (ACK) by the broker")
-            .register(meterRegistry);
-        this.publishedFailureCounter = Counter.builder("recommendations.published.failure")
-            .description("Recommendation messages NACKed or rejected by the broker")
-            .register(meterRegistry);
+        this.meterRegistry = meterRegistry;
 
         this.rabbitTemplate.setConfirmCallback(this::handleConfirm);
     }
@@ -75,10 +68,11 @@ public class RecommendationPublisher {
     private void handleConfirm(CorrelationData correlationData, boolean ack, String cause) {
         String correlationId = correlationData != null ? correlationData.getId() : "unknown";
         if (ack) {
-            publishedSuccessCounter.increment();
+            meterRegistry.counter("recommendations.published.total", "result", "success").increment();
             log.debug("Recommendation message {} confirmed (ACK) by broker", correlationId);
         } else {
-            publishedFailureCounter.increment();
+            meterRegistry.counter("recommendations.published.total", "result", "failure").increment();
+            meterRegistry.counter("collector.errors.total", "source", "rabbitmq_publish").increment();
             log.error("Recommendation message {} NACKed by broker. Cause: {}", correlationId, cause);
         }
     }

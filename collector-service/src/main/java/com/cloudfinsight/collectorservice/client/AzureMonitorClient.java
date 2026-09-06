@@ -14,6 +14,7 @@ import com.azure.monitor.query.models.QueryTimeInterval;
 import com.cloudfinsight.collectorservice.client.dto.PrometheusQueryResponse;
 import com.cloudfinsight.collectorservice.client.dto.PrometheusResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
@@ -51,14 +52,16 @@ public class AzureMonitorClient {
     private final TokenCredential credential;
     private final MetricsQueryClient client;
     private final RestClient restClient;
+    private final MeterRegistry meterRegistry;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public AzureMonitorClient() {
+    public AzureMonitorClient(MeterRegistry meterRegistry) {
         this.credential = new DefaultAzureCredentialBuilder().build();
         this.client = new MetricsQueryClientBuilder()
             .credential(credential)
             .buildClient();
         this.restClient = RestClient.builder().build();
+        this.meterRegistry = meterRegistry;
     }
 
     @Retryable(
@@ -68,35 +71,41 @@ public class AzureMonitorClient {
     )
     public List<RawMetricPoint> queryMetrics(String azureResourceId, Duration lookback) {
         log.info("Querying Azure Monitor for resource {} (lookback={})", azureResourceId, lookback);
+        meterRegistry.counter("collector.azure.api.calls.total", "client", "monitor", "endpoint", "metrics").increment();
 
-        Response<MetricsQueryResult> response = client.queryResourceWithResponse(
-            azureResourceId,
-            METRIC_NAMES,
-            new MetricsQueryOptions()
-                .setTimeInterval(new QueryTimeInterval(lookback)),
-            Context.NONE
-        );
-
-        MetricsQueryResult result = response.getValue();
-        List<RawMetricPoint> points = new ArrayList<>();
-
-        for (MetricResult metric : result.getMetrics()) {
-            String metricName = metric.getMetricName();
-            metric.getTimeSeries().forEach(ts ->
-                ts.getValues().forEach(v -> {
-                    if (v.getAverage() != null) {
-                        points.add(new RawMetricPoint(
-                            metricName,
-                            v.getAverage(),
-                            v.getTimeStamp()
-                        ));
-                    }
-                })
+        try {
+            Response<MetricsQueryResult> response = client.queryResourceWithResponse(
+                azureResourceId,
+                METRIC_NAMES,
+                new MetricsQueryOptions()
+                    .setTimeInterval(new QueryTimeInterval(lookback)),
+                Context.NONE
             );
-        }
 
-        log.info("Retrieved {} non-null data points for resource {}", points.size(), azureResourceId);
-        return points;
+            MetricsQueryResult result = response.getValue();
+            List<RawMetricPoint> points = new ArrayList<>();
+
+            for (MetricResult metric : result.getMetrics()) {
+                String metricName = metric.getMetricName();
+                metric.getTimeSeries().forEach(ts ->
+                    ts.getValues().forEach(v -> {
+                        if (v.getAverage() != null) {
+                            points.add(new RawMetricPoint(
+                                metricName,
+                                v.getAverage(),
+                                v.getTimeStamp()
+                            ));
+                        }
+                    })
+                );
+            }
+
+            log.info("Retrieved {} non-null data points for resource {}", points.size(), azureResourceId);
+            return points;
+        } catch (RuntimeException ex) {
+            meterRegistry.counter("collector.errors.total", "source", "azure_monitor").increment();
+            throw ex;
+        }
     }
 
     @Retryable(
@@ -106,48 +115,54 @@ public class AzureMonitorClient {
     )
     public Optional<RawMetricPoint> queryMemoryUsagePercent(String azureResourceId) {
         log.info("Querying Prometheus workspace for memory usage on resource {}", azureResourceId);
+        meterRegistry.counter("collector.azure.api.calls.total", "client", "monitor", "endpoint", "memory").increment();
 
-        String token = credential.getToken(
-            new TokenRequestContext().addScopes(PROMETHEUS_SCOPE)
-        ).block().getToken();
+        try {
+            String token = credential.getToken(
+                new TokenRequestContext().addScopes(PROMETHEUS_SCOPE)
+            ).block().getToken();
 
-        String query = "{__name__=\"" + MEMORY_METRIC_NAME + "\"}";
-        String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8).replace("+", "%20");
-        String url = prometheusQueryEndpoint + "/api/v1/query?query=" + encodedQuery;
+            String query = "{__name__=\"" + MEMORY_METRIC_NAME + "\"}";
+            String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8).replace("+", "%20");
+            String url = prometheusQueryEndpoint + "/api/v1/query?query=" + encodedQuery;
 
-        String rawJson = restClient.get()
-            .uri(URI.create(url))
-            .header("Authorization", "Bearer " + token)
-            .retrieve()
-            .body(String.class);
+            String rawJson = restClient.get()
+                .uri(URI.create(url))
+                .header("Authorization", "Bearer " + token)
+                .retrieve()
+                .body(String.class);
 
-        PrometheusQueryResponse response = parseResponse(rawJson);
+            PrometheusQueryResponse response = parseResponse(rawJson);
 
-        double used = 0;
-        double total = 0;
+            double used = 0;
+            double total = 0;
 
-        for (PrometheusResult result : response.data().result()) {
-            String resourceId = result.metric().get("microsoft.resourceid");
-            if (resourceId == null || !resourceId.equalsIgnoreCase(azureResourceId)) {
-                continue;
+            for (PrometheusResult result : response.data().result()) {
+                String resourceId = result.metric().get("microsoft.resourceid");
+                if (resourceId == null || !resourceId.equalsIgnoreCase(azureResourceId)) {
+                    continue;
+                }
+                String state = result.metric().get("state");
+                double value = Double.parseDouble(String.valueOf(result.value().get(1)));
+                total += value;
+                if ("used".equals(state)) {
+                    used = value;
+                }
             }
-            String state = result.metric().get("state");
-            double value = Double.parseDouble(String.valueOf(result.value().get(1)));
-            total += value;
-            if ("used".equals(state)) {
-                used = value;
+
+            if (total == 0) {
+                log.warn("No memory usage data found for resource {}", azureResourceId);
+                return Optional.empty();
             }
+
+            double percentUsed = (used / total) * 100.0;
+            log.info("Memory usage for resource {}: {}%", azureResourceId, percentUsed);
+
+            return Optional.of(new RawMetricPoint("Memory Percentage", percentUsed, OffsetDateTime.now()));
+        } catch (RuntimeException ex) {
+            meterRegistry.counter("collector.errors.total", "source", "azure_monitor").increment();
+            throw ex;
         }
-
-        if (total == 0) {
-            log.warn("No memory usage data found for resource {}", azureResourceId);
-            return Optional.empty();
-        }
-
-        double percentUsed = (used / total) * 100.0;
-        log.info("Memory usage for resource {}: {}%", azureResourceId, percentUsed);
-
-        return Optional.of(new RawMetricPoint("Memory Percentage", percentUsed, OffsetDateTime.now()));
     }
 
     private PrometheusQueryResponse parseResponse(String rawJson) {

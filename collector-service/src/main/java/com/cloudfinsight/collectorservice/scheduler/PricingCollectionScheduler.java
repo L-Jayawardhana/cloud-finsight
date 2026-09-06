@@ -8,6 +8,7 @@ import com.cloudfinsight.collectorservice.mapper.PricingSnapshotMapper;
 import com.cloudfinsight.collectorservice.repository.PricingSnapshotRepository;
 import com.cloudfinsight.collectorservice.service.SkuCatalogueService;
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +38,7 @@ public class PricingCollectionScheduler {
     private final Counter collectionCycleSuccessCounter;
     private final Counter collectionCycleFailureCounter;
     private final AtomicLong lastCollectionCycleTimestamp;
+    private final MeterRegistry meterRegistry;
 
     @Scheduled(fixedDelayString = "${collector.pricing.interval-ms}")
     public void collectPricing() {
@@ -62,10 +64,12 @@ public class PricingCollectionScheduler {
                 } else {
                     log.warn("No pricing found for SKU {} in region {}", armSkuName, region);
                     collectionCycleFailureCounter.increment();
+                    meterRegistry.counter("collector.errors.total", "source", "azure_pricing").increment();
                 }
             } catch (Exception ex) {
                 log.warn("Pricing collection failed for SKU {}: {}", armSkuName, ex.getMessage());
                 collectionCycleFailureCounter.increment();
+                meterRegistry.counter("collector.errors.total", "source", "azure_pricing").increment();
             }
         }
 

@@ -2,6 +2,7 @@ package com.cloudfinsight.apiservice.ai;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -48,11 +49,15 @@ public class LlmClient {
     private final ChatClient chatClient;
     private final Counter llmCallSuccessCounter;
     private final Counter llmCallFailureCounter;
+    private final Timer llmCallTimer;
 
     public LlmClient(ChatClient.Builder chatClientBuilder, MeterRegistry meterRegistry) {
         this.chatClient = chatClientBuilder.build();
         this.llmCallSuccessCounter = Counter.builder("llm.calls.success").register(meterRegistry);
         this.llmCallFailureCounter = Counter.builder("llm.calls.failure").register(meterRegistry);
+        this.llmCallTimer = Timer.builder("llm.api.call.duration.seconds")
+            .description("Duration of outbound LLM provider calls, including calls that fail")
+            .register(meterRegistry);
     }
 
     /**
@@ -70,11 +75,11 @@ public class LlmClient {
     public String explainRecommendation(RecommendationPromptData data) {
         String userPrompt = buildUserPrompt(data);
         try {
-            String response = chatClient.prompt()
+            String response = llmCallTimer.record(() -> chatClient.prompt()
                     .system(SYSTEM_PROMPT)
                     .user(userPrompt)
                     .call()
-                    .content();
+                    .content());
             llmCallSuccessCounter.increment();
             return response;
         } catch (RuntimeException ex) {
@@ -110,10 +115,10 @@ public class LlmClient {
         messages.add(new UserMessage(userMessage));
 
         try {
-            String response = chatClient.prompt()
+            String response = llmCallTimer.record(() -> chatClient.prompt()
                     .messages(messages)
                     .call()
-                    .content();
+                    .content());
             llmCallSuccessCounter.increment();
             return response;
         } catch (RuntimeException ex) {
