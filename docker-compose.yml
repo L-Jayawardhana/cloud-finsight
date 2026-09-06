@@ -64,16 +64,29 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: ${POSTGRES_USER:-finsight_user}
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # Without these, Keycloak infers its own issuer/redirect URLs from the
+      # raw Host header of whatever request reaches it. Behind the frontend's
+      # nginx proxy that header arrives as bare "localhost" (nginx's $host
+      # drops the port, and Keycloak has no idea it's mounted under /auth),
+      # so tokens ended up with issuer "http://localhost/realms/..." instead
+      # of "http://localhost:3000/auth/realms/...". That mismatched what
+      # keycloak-js and api-service both expect, causing every token to be
+      # rejected and the SPA to loop: login -> 401 -> re-login -> ...
+      # KC_HTTP_RELATIVE_PATH makes Keycloak itself serve (and expect) all
+      # paths under /auth, matching nginx's proxy_pass. KC_PROXY_HEADERS
+      # makes it trust nginx's X-Forwarded-Host/Proto for hostname/scheme.
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_PROXY_HEADERS: xforwarded
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "8180:8080"   # Keycloak admin console + token endpoint — http://localhost:8180
+      - "8180:8080"   # Keycloak admin console + token endpoint — http://localhost:8180/auth
       - "9000:9000"   # management port (health/metrics)
     volumes:
       - ./keycloak/cloud-finsight-realm.json:/opt/keycloak/data/import/cloud-finsight-realm.json:ro
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -e 'GET /health/ready HTTP/1.1\r\nhost: localhost\r\nConnection: close\r\n\r\n' >&3 && cat <&3 | grep -q '\"status\": \"UP\"'"]
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -e 'GET /auth/health/ready HTTP/1.1\r\nhost: localhost\r\nConnection: close\r\n\r\n' >&3 && cat <&3 | grep -q '\"status\": \"UP\"'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -94,7 +107,14 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: ${RABBITMQ_USER:-finsight_user}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/cloud-finsight
+      # Where api-service actually fetches signing keys from (must be
+      # reachable from inside this container - the browser-facing
+      # "localhost:3000/auth" is not). Accepted "iss" values are the
+      # application's default (see application.yml's app.security.allowed-issuers) -
+      # covers both this container's own http://localhost:3000/auth/...
+      # tokens and the http://localhost:8180/auth/... tokens used by the
+      # host-run :5173 Vite dev flow talking to this same container.
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/auth/realms/cloud-finsight/protocol/openid-connect/certs
       GEMINI_API_KEY: ${GEMINI_API_KEY}
     ports:
       - "8080:8080"   # api-service — http://localhost:8080
