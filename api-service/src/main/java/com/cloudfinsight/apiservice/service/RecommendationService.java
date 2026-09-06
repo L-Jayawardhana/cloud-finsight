@@ -143,15 +143,28 @@ public class RecommendationService {
     }
 
     private RecommendationSummaryDto toSummary(Recommendation r) {
+        RecommendationCandidate selected = recommendationCandidateRepository
+            .findByRecommendationIdAndSelectedTrue(r.getId())
+            .orElse(null);
+
         return new RecommendationSummaryDto(
             r.getId(),
             r.getVirtualMachine().getId(),
             r.getVirtualMachine().getName(),
+            r.getVirtualMachine().getCurrentSku(),
+            selected != null ? selected.getCandidateSku() : null,
+            selected != null ? selected.getGenerationTag() : null,
             r.getRecommendationType(),
             r.getConfidenceLevel(),
+            r.getConfidenceScore(),
             r.getEstimatedMonthlySavings(),
+            selected != null
+                ? SavingsMath.computeSavingPercent(r.getEstimatedMonthlySavings(), selected.getEstimatedMonthlyCost())
+                : BigDecimal.ZERO,
             r.getStatus(),
-            r.getCreatedAt()
+            r.getCreatedAt(),
+            selected != null ? splitLines(selected.getPros()) : List.of(),
+            selected != null ? splitLines(selected.getCons()) : List.of()
         );
     }
 

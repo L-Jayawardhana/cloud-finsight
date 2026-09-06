@@ -1,11 +1,18 @@
 import { httpClient } from './httpClient'
-import type { ExplanationResponse, Page, RecommendationDetail, RecommendationSummary } from './types'
+import type {
+  ExplanationResponse,
+  Page,
+  RecommendationDetail,
+  RecommendationSummary,
+  RecommendationType,
+} from './types'
 
 export interface ListRecommendationsParams {
   vmId?: number
-  type?: string
+  type?: RecommendationType
   page?: number
   size?: number
+  sort?: string
 }
 
 export async function listRecommendations(

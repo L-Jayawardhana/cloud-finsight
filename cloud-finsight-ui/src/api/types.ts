@@ -15,15 +15,25 @@ export interface CostSummary {
   recommendationCount: number
 }
 
+export type RecommendationType = 'DOWNSIZE' | 'UPSIZE' | 'CROSS_GENERATION'
+export type ConfidenceLevel = 'HIGH' | 'MEDIUM' | 'LOW'
+
 export interface RecommendationSummary {
   id: number
   vmId: number
   vmName: string
-  recommendationType: string
-  confidenceLevel: string
+  currentSku: string
+  candidateSku: string | null
+  generationTag: string | null
+  recommendationType: RecommendationType
+  confidenceLevel: ConfidenceLevel
+  confidenceScore: number | null
   estimatedMonthlySavings: number | null
+  savingPercent: number
   status: string
   createdAt: string
+  pros: string[]
+  cons: string[]
 }
 
 export interface RecommendationCandidate {
