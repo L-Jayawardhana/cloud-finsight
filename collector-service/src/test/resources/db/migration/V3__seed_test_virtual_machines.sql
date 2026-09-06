@@ -1,0 +1,20 @@
+INSERT INTO virtual_machines (azure_resource_id, name, resource_group, region, current_sku, os_type, generation_tag)
+VALUES
+    (
+        '/subscriptions/dfef51af-1de7-4c3d-936b-19850414f5e4/resourceGroups/rg-cloud-cost-platform-dev/providers/Microsoft.Compute/virtualMachines/vm-current-gen-d2sv4',
+        'vm-current-gen-d2sv4',
+        'rg-cloud-cost-platform-dev',
+        'southeastasia',
+        'Standard_D2s_v4',
+        'Linux',
+        'current-gen'
+    ),
+    (
+        '/subscriptions/dfef51af-1de7-4c3d-936b-19850414f5e4/resourceGroups/rg-cloud-cost-platform-dev/providers/Microsoft.Compute/virtualMachines/vm-older-gen-d2sv3',
+        'vm-older-gen-d2sv3',
+        'rg-cloud-cost-platform-dev',
+        'southeastasia',
+        'Standard_D2s_v3',
+        'Linux',
+        'older-gen'
+    );
