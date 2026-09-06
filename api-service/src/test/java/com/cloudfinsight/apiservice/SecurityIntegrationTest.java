@@ -48,8 +48,15 @@ class SecurityIntegrationTest {
 
     @DynamicPropertySource
     static void registerKeycloakProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri",
-            () -> keycloak.getAuthServerUrl() + "/realms/cloud-finsight");
+        // SecurityConfig no longer resolves signing keys via issuer-uri discovery (that
+        // requires the app to reach the issuer's own URL, which breaks behind a reverse
+        // proxy - see the Keycloak issuer/proxy fix). It reads jwk-set-uri directly and
+        // validates "iss" against an explicit allow-list instead, so both need to point
+        // at this test's own Testcontainers Keycloak rather than the dev defaults.
+        String issuer = keycloak.getAuthServerUrl() + "/realms/cloud-finsight";
+        registry.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri",
+            () -> issuer + "/protocol/openid-connect/certs");
+        registry.add("app.security.allowed-issuers", () -> issuer);
     }
 
     @LocalServerPort
