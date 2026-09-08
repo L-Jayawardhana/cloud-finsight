@@ -8,7 +8,7 @@ export function AuthCallback() {
 
   useEffect(() => {
     if (!initialized) return
-    navigate(authenticated ? '/' : '/', { replace: true })
+    navigate(authenticated ? '/dashboard' : '/', { replace: true })
   }, [initialized, authenticated, navigate])
 
   return (

@@ -32,7 +32,7 @@ export function RecommendationDetail() {
     return (
       <DashboardLayout>
         <p className="error-text">Recommendation not found.</p>
-        <Link to="/">Back to overview</Link>
+        <Link to="/dashboard">Back to overview</Link>
       </DashboardLayout>
     )
   }
@@ -42,7 +42,7 @@ export function RecommendationDetail() {
 
   return (
     <DashboardLayout>
-      <Link to="/">← Back to overview</Link>
+      <Link to="/dashboard">← Back to overview</Link>
       <h1>
         {rec.recommendationType} — {rec.vmName}
       </h1>

@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard' },
+  { to: '/dashboard', label: 'Dashboard' },
   { to: '/recommendations', label: 'Recommendations' },
   { to: '/chat', label: 'Chat' },
 ]
@@ -14,13 +14,15 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
-        <span className="app-brand">cloud-finsight</span>
+        <Link to="/dashboard" className="app-brand">
+          cloud-finsight
+        </Link>
         <nav className="app-sidebar-nav">
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
+              end={item.to === '/dashboard'}
               className={({ isActive }) =>
                 isActive ? 'app-sidebar-link app-sidebar-link-active' : 'app-sidebar-link'
               }
