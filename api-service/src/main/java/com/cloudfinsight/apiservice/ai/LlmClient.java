@@ -33,6 +33,11 @@ public class LlmClient {
             the reasoning behind the recommendation (utilisation headroom, generation,
             relative cost) in a factual, concise tone, and do not make claims not
             supported by the data provided to you.
+
+            Respond in plain prose only, with no markdown formatting whatsoever: no
+            asterisks, underscores, bullet points, numbered lists, or headings. The
+            response is displayed to the user as raw text, so any markdown syntax would
+            appear literally on screen rather than being rendered.
             """;
 
     private static final String CHAT_SYSTEM_PROMPT = """
@@ -44,6 +49,11 @@ public class LlmClient {
             says no recommendation exists yet, say so honestly rather than fabricating one.
             When asked why a VM was flagged, reference the specific utilisation statistics
             given in the context, not generic reasoning.
+
+            Respond in plain prose only, with no markdown formatting whatsoever: no
+            asterisks, underscores, bullet points, numbered lists, or headings. The
+            response is displayed to the user as raw text, so any markdown syntax would
+            appear literally on screen rather than being rendered.
             """;
 
     private final ChatClient chatClient;

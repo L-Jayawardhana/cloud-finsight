@@ -96,3 +96,20 @@ in the process — everything else tested clean on the first attempt.
   fully verified end to end.
 - **Grafana panel-level rendering** was checked via the API (dashboards provisioned, backed by
   live data) but not visually confirmed to render without panel errors.
+
+## Follow-up bug found and fixed (second session)
+
+**LLM responses contained literal markdown syntax.** Reported against a live `/explain` response
+for recommendation 102: the text included literal `**bold**` asterisks (e.g. `"...from its
+current **Standard_D2s_v3** SKU..."`) rendered on screen as-is, since `TypewriterText.tsx`
+displays the LLM's response as plain text rather than rendering markdown. Root cause: neither
+`LlmClient` system prompt (explain or chat) told Gemini to avoid markdown formatting, and the
+model defaulted to its usual markdown-flavored output style.
+
+Fixed by adding an explicit "respond in plain prose only, no markdown whatsoever" instruction to
+both system prompts. Verified live against the exact recommendation from the bug report (id 102,
+`vm-older-gen-d2sv3`) and against the chat endpoint — both now return clean prose with no
+markdown artifacts. Existing `LlmClientTest`/`ChatServiceContextTest`/
+`RecommendationServiceExplainCacheTest` unit tests still pass unchanged (none assert on exact
+prompt text).
+
