@@ -1,11 +1,60 @@
-# cloud-cost-observability-platform
+# Cloud FinSight
 
-AI-Assisted Cloud Cost Observability and Optimization Platform — IEEE
+**AI-assisted cloud cost observability and optimization platform.**
 
-An observability platform for Azure VMs that watches real utilisation and live pricing, and
-turns them into concrete, explainable rightsizing recommendations: which VMs are
-over-provisioned, what to switch them to, how much that saves, and — via an LLM grounded in the
-already-computed figures — a plain-language explanation and follow-up chat about *why*.
+Cloud FinSight watches an Azure VM fleet's real utilisation and live retail pricing, and turns
+them into concrete, explainable rightsizing recommendations: which VMs are over-provisioned,
+what SKU to switch them to, exactly how much that saves per month/year, and — via an LLM
+grounded in the already-computed figures, never asked to do the math itself — a plain-language
+explanation and follow-up chat about *why*.
+
+Built as a submission for an IEEE project, but engineered like a production system: two
+independently-deployable Spring Boot services talking over RabbitMQ, a five-stage scored
+recommendation pipeline, JWT auth via Keycloak, and a full Prometheus/Grafana/Loki observability
+stack — all reproducible with one `docker compose up`.
+
+## Why this exists
+
+Cloud spend on over-provisioned VMs is a silent, recurring cost: nobody notices a VM sized for
+peak load that's been idling at 5% CPU for three months. Cloud FinSight closes that loop
+automatically — continuously watching real usage and current market pricing, so rightsizing
+opportunities surface on their own instead of waiting for a manual cost review, complete with the
+reasoning ("why this SKU, why now, how confident are we") a human would otherwise have to dig up
+by hand.
+
+## Key features
+
+- **Continuous, automatic analysis** — no manual audits. collector-service polls Azure Monitor
+  and the Azure Retail Prices API on independent schedules and re-scores every VM every cycle
+  (15 min by default).
+- **Explainable, not a black box.** Every recommendation carries a confidence level driven by how
+  much usage history actually backs it (`HIGH`/`MEDIUM`/`LOW`), a scored trade-off across cost,
+  reliability, and performance, and human-readable pros/cons — see
+  [docs/recommendation-engine.md](docs/recommendation-engine.md) for the full five-stage pipeline.
+- **Guardrailed by design.** A candidate SKU is only ever suggested if it leaves ≥20% headroom on
+  both CPU and memory versus observed usage — the engine can't recommend a resize that would
+  leave a workload under-resourced.
+- **LLM explanations that can't hallucinate numbers.** `/explain` and `/chat` (Gemini, via Spring
+  AI) are grounded in the pipeline's already-computed savings figures and explicitly instructed
+  never to calculate them itself, so the AI narrative can never contradict what's shown in the UI.
+- **Real auth, real observability.** Keycloak-issued JWTs (role-gated admin actions), and a
+  Prometheus + Grafana + Loki/Promtail stack watching both services out of the box — not an
+  afterthought bolted on for the demo.
+- **One command to stand up the whole platform.** Postgres schema (Flyway), the Keycloak realm
+  and demo users, both backend services, the React dashboard, and the full monitoring stack are
+  all provisioned by `docker compose up -d`.
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19 + TypeScript, Vite, TanStack Query, React Router, Recharts, `keycloak-js` (OIDC PKCE), served by nginx |
+| Backend | Java 21, Spring Boot 4, Spring Security (OAuth2 resource server), Spring Data JPA, Spring AI (Google Gemini), Flyway |
+| Data & messaging | PostgreSQL, Redis (LLM/chat caching, pricing cache), RabbitMQ |
+| Auth | Keycloak (JWT issuance/validation) |
+| Observability | Micrometer + Prometheus, Grafana, Loki + Promtail |
+| External APIs | Azure Monitor (VM metrics), Azure Retail Prices API (live SKU pricing), Google Gemini (explain/chat) |
+| Infra | Docker Compose (11 services, single-command bring-up) |
 
 ## Architecture
 
@@ -106,6 +155,21 @@ npm run build   # tsc -b && vite build
 npm run lint    # oxlint
 ```
 
+## Project structure
+
+```
+cloud-finsight/
+├── api-service/          # Spring Boot :8080 - dashboard API, auth, /explain & /chat (Gemini)
+├── collector-service/    # Spring Boot :8081 - Azure polling + 5-stage recommendation engine
+├── cloud-finsight-ui/    # React + TS + Vite SPA (nginx :3000, proxies /api and /auth)
+├── keycloak/             # Realm export (cloud-finsight realm, demo users, client secret)
+├── grafana/               \
+├── prometheus/             > dashboards / scrape config / log-shipping config
+├── promtail/               /
+├── docs/                 # Architecture, API reference, recommendation engine, observability
+└── docker-compose.yml    # Single-command bring-up of all 11 services
+```
+
 ## Further documentation
 
 - [docs/architecture.md](docs/architecture.md) — system diagram, component responsibilities, data flow
@@ -114,3 +178,7 @@ npm run lint    # oxlint
 - [docs/observability.md](docs/observability.md) — Prometheus metric catalogue, Grafana dashboards, Loki query examples
 - [docs/local-dev-azure-auth.md](docs/local-dev-azure-auth.md) — how collector-service authenticates to Azure locally
 - [docs/epic-10-manual-qa-report.md](docs/epic-10-manual-qa-report.md) — the latest manual end-to-end QA pass
+
+## License
+
+MIT — see [LICENSE](LICENSE).
