@@ -3,15 +3,17 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AuthCallback } from './pages/AuthCallback'
 import { ChatPage } from './pages/ChatPage'
 import { Dashboard } from './pages/Dashboard'
+import { LandingPage } from './pages/LandingPage'
 import { RecommendationDetail } from './pages/RecommendationDetail'
 import { RecommendationsPage } from './pages/RecommendationsPage'
 
 function App() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/sso/callback" element={<AuthCallback />} />
       <Route
-        path="/"
+        path="/dashboard"
         element={
           <ProtectedRoute>
             <Dashboard />

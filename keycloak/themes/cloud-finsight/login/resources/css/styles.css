@@ -1,0 +1,231 @@
+/* ==========================================================================
+   Base rules carried over from the parent "keycloak.v2" theme.
+   Declaring `styles=` in theme.properties replaces the parent's stylesheet
+   list rather than appending to it, so the handful of structural rules the
+   parent theme depends on (login container width, header top-border, the
+   background logo hook, etc.) are reproduced here before the Cloud FinSight
+   overrides are layered on below.
+   ========================================================================== */
+
+:root {
+  --keycloak-logo-url: url('../img/keycloak-logo-text.svg');
+  --keycloak-bg-logo-url: none;
+  --keycloak-logo-height: 63px;
+  --keycloak-logo-width: 300px;
+  --keycloak-card-top-color: var(--pf-v5-global--palette--blue-400);
+}
+
+.pf-v5-c-login__container {
+  grid-template-columns: 34rem;
+  grid-template-areas: "header"
+                       "main"
+}
+
+.pf-v5-c-login__main-header {
+  border-top: 4px solid var(--keycloak-card-top-color);
+}
+
+.pf-v5-c-login__main-footer-band:first-child {
+  margin-block-start: var(--pf-v5-global--spacer--lg);
+}
+
+.pf-v5-c-login__main-footer-band:last-child {
+  padding-bottom: 0;
+}
+
+.login-pf body {
+  background: var(--keycloak-bg-logo-url) no-repeat center center fixed;
+  background-size: cover;
+  height: 100%;
+}
+
+div.kc-logo-text {
+  background-image: var(--keycloak-logo-url);
+  height: var(--keycloak-logo-height);
+  width: var(--keycloak-logo-width);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+  margin: 0 auto;
+}
+
+div.kc-logo-text span {
+  display: none;
+}
+
+#kc-header-wrapper {
+  font-size: 29px;
+  line-height: 1.2em;
+  white-space: normal;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  div.pf-v5-c-login__main-header {
+    grid-template-columns: 70% 30%;
+  }
+}
+
+/* ==========================================================================
+   Cloud FinSight branding
+   Reskins the theme above via the CSS custom properties the parent theme
+   exposes for exactly this purpose, plus a handful of component overrides,
+   using the same tokens as the app itself (cloud-finsight-ui/src/index.css):
+   warm paper background, a single confident green accent, Fraunces for
+   headings, Inter for body/UI text, squarer "editorial" radii.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --cf-bg: #faf7f2;
+  --cf-bg-elevated: #ffffff;
+  --cf-border: #e6e0d4;
+  --cf-border-strong: #d4cab3;
+  --cf-text: #211d17;
+  --cf-text-muted: #756c5c;
+  --cf-accent: #0f6e4f;
+  --cf-accent-dark: #0b5a40;
+  --cf-accent-soft: #e4f0e9;
+  --cf-red: #a8401d;
+  --cf-red-soft: #f6e5dc;
+  --cf-radius-sm: 4px;
+  --cf-radius-lg: 10px;
+  --cf-font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --cf-font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+
+  --keycloak-card-top-color: var(--cf-accent);
+
+  /* Retint PatternFly's primary-action color everywhere it's used
+     (submit button, focus rings, selected states) from one place. */
+  --pf-v5-global--primary-color--100: var(--cf-accent);
+  --pf-v5-global--primary-color--200: var(--cf-accent-dark);
+  --pf-v5-global--primary-color--300: var(--cf-accent);
+  --pf-v5-global--link--Color: var(--cf-accent);
+  --pf-v5-global--link--Color--hover: var(--cf-accent-dark);
+  --pf-v5-global--link--Color--dark: var(--cf-accent);
+  --pf-v5-global--link--Color--light: var(--cf-accent);
+  --pf-v5-global--FontFamily--text: var(--cf-font-sans);
+  --pf-v5-global--FontFamily--heading: var(--cf-font-serif);
+}
+
+html,
+body {
+  background: var(--cf-bg) !important;
+  font-family: var(--cf-font-sans);
+}
+
+.login-pf body {
+  background:
+    radial-gradient(560px circle at 12% 8%, var(--cf-accent-soft), transparent 60%),
+    var(--cf-bg) !important;
+}
+
+/* Brand wordmark banner above the card ("Cloud FinSight", from the realm's
+   displayNameHtml) - was styled for a dark hero image backdrop by default;
+   restyle as a quiet serif wordmark on the light page background instead. */
+#kc-header-wrapper {
+  font-family: var(--cf-font-serif);
+  font-size: 1.75rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  color: var(--cf-text) !important;
+  margin-bottom: var(--pf-v5-global--spacer--md);
+}
+
+/* The card itself */
+.pf-v5-c-login__main {
+  background: var(--cf-bg-elevated);
+  border: 1px solid var(--cf-border);
+  border-radius: var(--cf-radius-lg);
+  box-shadow: 0 16px 36px rgba(33, 29, 23, 0.1);
+  overflow: hidden;
+}
+
+.pf-v5-c-login__main-header {
+  padding-top: 2rem;
+}
+
+.pf-v5-c-login__main-body {
+  color: var(--cf-text);
+}
+
+/* "Sign in to your account" */
+.pf-v5-c-title.pf-m-3xl,
+#kc-page-title {
+  font-family: var(--cf-font-serif);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--cf-text);
+}
+
+label,
+.pf-v5-c-form__label-text {
+  color: var(--cf-text);
+  font-weight: 600;
+}
+
+.pf-v5-c-form-control {
+  background: var(--cf-bg-elevated);
+  border: 1px solid var(--cf-border);
+  border-radius: var(--cf-radius-sm);
+  color: var(--cf-text);
+}
+
+.pf-v5-c-form-control:focus {
+  border-color: var(--cf-accent);
+  box-shadow: 0 0 0 1px var(--cf-accent);
+}
+
+.pf-v5-c-button {
+  border-radius: var(--cf-radius-sm);
+  font-weight: 600;
+}
+
+.pf-v5-c-button.pf-m-primary {
+  background-color: var(--cf-accent);
+  color: #fff;
+}
+
+.pf-v5-c-button.pf-m-primary:hover,
+.pf-v5-c-button.pf-m-primary:focus,
+.pf-v5-c-button.pf-m-primary:active {
+  background-color: var(--cf-accent-dark) !important;
+  color: #fff !important;
+}
+
+.pf-v5-c-button.pf-m-block {
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
+}
+
+a,
+a:visited {
+  color: var(--cf-accent);
+}
+
+a:hover {
+  color: var(--cf-accent-dark);
+}
+
+.pf-v5-c-alert.pf-m-danger {
+  background: var(--cf-red-soft);
+  border-color: var(--cf-red);
+}
+
+.pf-v5-c-alert.pf-m-danger .pf-v5-c-alert__title,
+.pf-v5-c-alert.pf-m-danger .pf-v5-c-alert__icon {
+  color: var(--cf-red);
+}
+
+.pf-v5-c-check__label {
+  color: var(--cf-text-muted);
+  font-weight: 400;
+}
+
+.pf-v5-c-login__main-footer-links,
+.pf-v5-c-login__main-footer-band-item,
+#kc-registration {
+  color: var(--cf-text-muted);
+}

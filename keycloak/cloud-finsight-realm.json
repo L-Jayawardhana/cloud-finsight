@@ -3,6 +3,9 @@
   "enabled": true,
   "sslRequired": "none",
   "accessCodeLifespan": 600,
+  "displayName": "Cloud FinSight",
+  "displayNameHtml": "Cloud FinSight",
+  "loginTheme": "cloud-finsight",
   "roles": {
     "realm": [
       {
